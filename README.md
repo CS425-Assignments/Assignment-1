@@ -17,6 +17,8 @@ This repository consists of the codebase for the implementation of a live-chat s
 - `A1.pdf`
 - `server_grp.cpp`
 - `client_grp.cpp`
+- `tcp_server.cpp`
+- `utilities.cpp`
 - `users.txt`
 
 ## Requirements
