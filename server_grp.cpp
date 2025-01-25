@@ -21,15 +21,97 @@
 
 using namespace std;
 
+// essential data structures
+unordered_map <string, string> users; // username --> password
+unordered_map <int, string> clients; // socket --> client
+unordered_map <string, unordered_set<int> > groups; // group name --> client sockets
+
+void client_handler(int client_socket )
+{
+    // pass
+}
+
 int main() {
     TCP_Server HTTP_Server;
     int server_welcome_socket = HTTP_Server.create_and_bind_socket(SERVER_PORT);
-    // essential data structures
-    unordered_map <string, string> users; // username --> password
-    unordered_map <int, string> clients; // socket --> client
-    unordered_map <string, unordered_set<int> > groups; // group name --> client sockets
+
+    users.clear();
+    clients.clear();
+    groups.clear();
+    
     users = initialise_users();
     
+    int num_users = users.size();
+    // listen for incoming connections
+    if (listen(server_welcome_socket, num_users) < 0) 
+    { 
+        perror("server listen failed"); 
+        exit(EXIT_FAILURE); 
+    }
 
+    // accept incoming connections
+    struct sockaddr_in address;
+    int addrlen = sizeof(address);
+    int client_socket;
 
+    while (true)
+    {
+        if ((client_socket = accept(server_welcome_socket, (struct sockaddr *)&address, (socklen_t*)&addrlen)) < 0) 
+        { 
+            perror("server accept failed"); 
+            exit(EXIT_FAILURE); 
+        }
+
+        // authenticate user
+        char buffer[BUFFER_SIZE];
+        memset(buffer, 0, BUFFER_SIZE);
+
+        // send welcome message
+        string welcome_message = "Enter the user name";
+        send(client_socket, welcome_message.c_str(), welcome_message.length(), 0);
+        
+        int bytes_received = recv(client_socket, buffer, BUFFER_SIZE, 0);
+        if (bytes_received <= 0) 
+        {
+            perror("server receive failed");
+            exit(EXIT_FAILURE);
+        }
+
+        string username = buffer;
+
+        // send password message
+        memset(buffer, 0, BUFFER_SIZE);
+        string password_message = "Enter the password";
+        send(client_socket, password_message.c_str(), password_message.length(), 0);
+
+        bytes_received = recv(client_socket, buffer, BUFFER_SIZE, 0);
+        if (bytes_received <= 0) 
+        {
+            perror("server receive failed");
+            exit(EXIT_FAILURE);
+        }
+
+        string password = buffer;
+
+        // authenticate user
+        if (users.find(username) == users.end() || users[username] != password) 
+        {
+            string authentication_failed = "Authentication failed";
+            send(client_socket, authentication_failed.c_str(), authentication_failed.length(), 0);
+            close(client_socket);
+            continue;
+        }
+
+        string welcome = "Welcome to the server";
+        send(client_socket, welcome.c_str(), welcome.length(), 0);
+
+        // add client to clients
+        clients[client_socket] = username;
+
+        // create a thread to handle the client
+        thread client_thread(client_handler, client_socket);
+
+        // detach the thread
+        client_thread.detach();
+    }
 }
