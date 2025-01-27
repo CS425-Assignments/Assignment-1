@@ -27,6 +27,10 @@ unordered_map <int, string> clients; // socket --> client
 unordered_map <string, int> sockets; // client --> socket
 unordered_map <string, unordered_set<int> > groups; // group name --> client sockets
 
+mutex users_lock, clients_lock, sockets_lock, groups_lock;
+unordered_map <string, mutex> group_locks;
+unordered_map <int, mutex> client_locks;
+
 void send_message(const unordered_set<int>& recv_sockets,const string message)
 {
     for (auto& sock : recv_sockets){
