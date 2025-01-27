@@ -1,4 +1,3 @@
-// server-side implementation in C++ for a chat server with private messages and group messaging
 #include <iostream>
 #include <string>
 #include <thread>
@@ -21,11 +20,14 @@
 
 using namespace std;
 
-// essential data structures
-unordered_map <string, string> users; // username --> password
-unordered_map <int, string> clients; // socket --> client
-unordered_map <string, int> sockets; // client --> socket
-unordered_map <string, unordered_set<int> > groups; // group name --> client sockets
+unordered_map<string, string> users;              // username --> password
+unordered_map<int, string> clients;               // socket --> client
+unordered_map<string, int> sockets;               // client --> socket
+unordered_map<string, unordered_set<int>> groups; // group name --> client sockets
+
+mutex users_lock, clients_lock, sockets_lock, groups_lock;
+unordered_map <string, mutex> group_locks;
+unordered_map <int, mutex> client_locks;
 
 enum STATUS
 {
@@ -40,12 +42,18 @@ enum STATUS
 
 STATUS send_message(const unordered_set<int>& recv_sockets,const string message)
 {
-    for (auto& sock : recv_sockets){
+    for (auto &sock : recv_sockets)
+    {
         send(sock, message.c_str(), message.length(), 0);
     }
 }
 
+<<<<<<< HEAD
 STATUS create_group(const string groupname){
+=======
+void create_group(const string groupname)
+{
+>>>>>>> ad3b9acee659e2ae29c7fc8cbf1418ccf713a427
     // assumes group does not exist yet
 
     groups[groupname] = {};
@@ -53,14 +61,24 @@ STATUS create_group(const string groupname){
     // create a lock corresponding to this map
 }
 
+<<<<<<< HEAD
 STATUS join_group(const string groupname, const int socket){
+=======
+void join_group(const string groupname, const int socket)
+{
+>>>>>>> ad3b9acee659e2ae29c7fc8cbf1418ccf713a427
 
     // lock
     groups[groupname].insert(socket);
     // unlock
 }
 
+<<<<<<< HEAD
 STATUS leave_group (const string groupname, const int socket){
+=======
+void leave_group(const string groupname, const int socket)
+{
+>>>>>>> ad3b9acee659e2ae29c7fc8cbf1418ccf713a427
     // assumes socket is present in group
 
     // lock
@@ -206,8 +224,59 @@ void client_handler(int client_socket)
     }
 }
 
-int main() {
+bool authenticate_user(int client_socket)
+{
+    // Authenticate user
+    char buffer[BUFFER_SIZE];
+    memset(buffer, 0, BUFFER_SIZE);
+    
+    string username_message = "Enter the user name : ";
+    send(client_socket, username_message.c_str(), username_message.length(), 0);
 
+    int bytes_received = recv(client_socket, buffer, BUFFER_SIZE, 0);
+    if (bytes_received <= 0)
+    {
+        perror("Username receive failed.");
+        return false;
+    }
+    string username = buffer;
+
+    memset(buffer, 0, BUFFER_SIZE);
+    string password_message = "Enter the password : ";
+    send(client_socket, password_message.c_str(), password_message.length(), 0);
+
+    bytes_received = recv(client_socket, buffer, BUFFER_SIZE, 0);
+    if (bytes_received <= 0)
+    {
+        perror("Password receive failed");
+        return false;
+    }
+    string password = buffer;
+
+    if (users.find(username) == users.end() || users[username] != password)
+    {
+        string authentication_failed = "Authentication failed";
+        send(client_socket, authentication_failed.c_str(), authentication_failed.length(), 0);
+        close(client_socket);
+        return false;
+    }
+
+    string welcome = "Welcome to the chat server!";
+    send(client_socket, welcome.c_str(), welcome.length(), 0);
+
+    // Update the mappings
+    clients[client_socket] = username;
+    sockets[username] = client_socket;
+
+    // Create a thread to handle the client
+    thread client_thread(client_handler, client_socket);
+
+    client_thread.detach();
+    return true;
+}
+
+int main()
+{
     users.clear();
     sockets.clear();
     clients.clear();
@@ -219,7 +288,7 @@ int main() {
     int num_users = users.size();
     HTTP_Server.start_listening(num_users);
 
-    // accept incoming connections
+    // Accept incoming connections
     struct sockaddr_in address;
     int addrlen = sizeof(address);
     int client_socket;
@@ -228,42 +297,13 @@ int main() {
     {
         HTTP_Server.accept_connection(client_socket, address, addrlen);
 
-        // authenticate user
-        char buffer[BUFFER_SIZE];
-        memset(buffer, 0, BUFFER_SIZE);
-        string welcome_message = "Enter the user name";
-        send(client_socket, welcome_message.c_str(), welcome_message.length(), 0);
-        
-        int bytes_received = recv(client_socket, buffer, BUFFER_SIZE, 0);
-        if (bytes_received <= 0) 
+        if(!authenticate_user(client_socket))
         {
-            perror("username receive failed");
-            exit(EXIT_FAILURE);
-        }
-
-        string username = buffer;
-        memset(buffer, 0, BUFFER_SIZE);
-        string password_message = "Enter the password";
-        send(client_socket, password_message.c_str(), password_message.length(), 0);
-
-        bytes_received = recv(client_socket, buffer, BUFFER_SIZE, 0);
-        if (bytes_received <= 0) 
-        {
-            perror("password receive failed");
-            exit(EXIT_FAILURE);
-        }
-
-        string password = buffer;
-
-        // authenticate user
-        if (users.find(username) == users.end() || users[username] != password) 
-        {
-            string authentication_failed = "Authentication failed";
-            send(client_socket, authentication_failed.c_str(), authentication_failed.length(), 0);
             close(client_socket);
             continue;
         }
 
+<<<<<<< HEAD
         string welcome = "Welcome to the server";
         send(client_socket, welcome.c_str(), welcome.length(), 0);
 
@@ -271,6 +311,8 @@ int main() {
         clients[client_socket] = username;
         sockets[username] = client_socket;
 
+=======
+>>>>>>> ad3b9acee659e2ae29c7fc8cbf1418ccf713a427
         thread client_thread(client_handler, client_socket);
         client_thread.detach();
     }
