@@ -4,5 +4,9 @@
         "string": "cpp",
         "mutex": "cpp",
         "unordered_map": "cpp"
+    },
+    "sonarlint.connectedMode.project": {
+        "connectionId": "cs455-project",
+        "projectKey": "CS455-Project_CS455-Assignment-1"
     }
 }
