@@ -23,6 +23,8 @@ This repository consists of the codebase for the implementation of a live-chat s
 
 ## Requirements
 
+- `C++20`
+
 ## Instructions
 
 ## Documentation
