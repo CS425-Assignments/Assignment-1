@@ -48,12 +48,7 @@ STATUS send_message(const unordered_set<int>& recv_sockets,const string message)
     }
 }
 
-<<<<<<< HEAD
 STATUS create_group(const string groupname){
-=======
-void create_group(const string groupname)
-{
->>>>>>> ad3b9acee659e2ae29c7fc8cbf1418ccf713a427
     // assumes group does not exist yet
 
     groups[groupname] = {};
@@ -61,24 +56,14 @@ void create_group(const string groupname)
     // create a lock corresponding to this map
 }
 
-<<<<<<< HEAD
 STATUS join_group(const string groupname, const int socket){
-=======
-void join_group(const string groupname, const int socket)
-{
->>>>>>> ad3b9acee659e2ae29c7fc8cbf1418ccf713a427
 
     // lock
     groups[groupname].insert(socket);
     // unlock
 }
 
-<<<<<<< HEAD
 STATUS leave_group (const string groupname, const int socket){
-=======
-void leave_group(const string groupname, const int socket)
-{
->>>>>>> ad3b9acee659e2ae29c7fc8cbf1418ccf713a427
     // assumes socket is present in group
 
     // lock
@@ -302,18 +287,5 @@ int main()
             close(client_socket);
             continue;
         }
-
-<<<<<<< HEAD
-        string welcome = "Welcome to the server";
-        send(client_socket, welcome.c_str(), welcome.length(), 0);
-
-        // add client to clients
-        clients[client_socket] = username;
-        sockets[username] = client_socket;
-
-=======
->>>>>>> ad3b9acee659e2ae29c7fc8cbf1418ccf713a427
-        thread client_thread(client_handler, client_socket);
-        client_thread.detach();
     }
 }
