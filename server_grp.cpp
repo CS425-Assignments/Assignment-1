@@ -47,6 +47,8 @@ STATUS send_message(const unordered_set<int>& recv_sockets,const string message)
     {
         send(sock, message.c_str(), message.length(), 0);
     }
+
+    return SUCCESS;
 }
 
 STATUS create_group(const string group_name)
@@ -227,7 +229,7 @@ void client_handler(int client_socket)
                 string response = "You are not a member of thr group.";
                 send(client_socket, response.c_str(), response.length(), 0);
             }
-            unordered_set<int> recipients = groups[group_name];
+            recipients = groups[group_name];
             recipients.erase(client_socket);
             STATUS result = send_message(recipients, message); 
             if(result == SUCCESS) {
