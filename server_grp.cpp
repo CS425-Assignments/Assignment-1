@@ -32,22 +32,16 @@ void client_handler(int client_socket )
 }
 
 int main() {
-    TCP_Server HTTP_Server;
-    int server_welcome_socket = HTTP_Server.create_and_bind_socket(SERVER_PORT);
 
     users.clear();
     clients.clear();
     groups.clear();
-    
     users = initialise_users();
-    
+
+    TCP_Server HTTP_Server;
+    HTTP_Server.create_and_bind_socket(SERVER_PORT);
     int num_users = users.size();
-    // listen for incoming connections
-    if (listen(server_welcome_socket, num_users) < 0) 
-    { 
-        perror("server listen failed"); 
-        exit(EXIT_FAILURE); 
-    }
+    HTTP_Server.start_listening(num_users);
 
     // accept incoming connections
     struct sockaddr_in address;
@@ -56,30 +50,22 @@ int main() {
 
     while (true)
     {
-        if ((client_socket = accept(server_welcome_socket, (struct sockaddr *)&address, (socklen_t*)&addrlen)) < 0) 
-        { 
-            perror("server accept failed"); 
-            exit(EXIT_FAILURE); 
-        }
+        HTTP_Server.accept_connection(client_socket, address, addrlen);
 
         // authenticate user
         char buffer[BUFFER_SIZE];
         memset(buffer, 0, BUFFER_SIZE);
-
-        // send welcome message
         string welcome_message = "Enter the user name";
         send(client_socket, welcome_message.c_str(), welcome_message.length(), 0);
         
         int bytes_received = recv(client_socket, buffer, BUFFER_SIZE, 0);
         if (bytes_received <= 0) 
         {
-            perror("server receive failed");
+            perror("username receive failed");
             exit(EXIT_FAILURE);
         }
 
         string username = buffer;
-
-        // send password message
         memset(buffer, 0, BUFFER_SIZE);
         string password_message = "Enter the password";
         send(client_socket, password_message.c_str(), password_message.length(), 0);
@@ -87,7 +73,7 @@ int main() {
         bytes_received = recv(client_socket, buffer, BUFFER_SIZE, 0);
         if (bytes_received <= 0) 
         {
-            perror("server receive failed");
+            perror("password receive failed");
             exit(EXIT_FAILURE);
         }
 
@@ -107,11 +93,7 @@ int main() {
 
         // add client to clients
         clients[client_socket] = username;
-
-        // create a thread to handle the client
-        thread client_thread(client_handler, client_socket);
-
-        // detach the thread
-        client_thread.detach();
+        // thread client_thread(client_handler, client_socket);
+        // client_thread.detach();
     }
 }

@@ -14,17 +14,23 @@
 #include <fstream>
 
 class TCP_Server
-{
-    private:
-        int tcp_server_socket;
+{ 
     public:
-        int create_and_bind_socket(int PORT)
-        {
-            int tcp_server_socket = socket(AF_INET, SOCK_STREAM, 0);
+        int tcp_server_socket;
+
+        TCP_Server() : tcp_server_socket(-1) {}
+
+        ~TCP_Server() {
+            if (tcp_server_socket >= 0) {
+                close(tcp_server_socket);
+            }
+        }
+
+        void create_and_bind_socket(int PORT) {
+            tcp_server_socket = socket(AF_INET, SOCK_STREAM, 0);
             if ((tcp_server_socket = socket(AF_INET, SOCK_STREAM, 0)) < 0) // creation of TCP socket
             {
                 perror("cannot create socket"); 
-                return 0; 
             }
             // bind socket to port number
             struct sockaddr_in address;
@@ -37,6 +43,20 @@ class TCP_Server
                 perror("bind failed"); 
                 exit(EXIT_FAILURE);
             }
-            return tcp_server_socket;
+        }
+
+        void start_listening(int num_users) {
+            if (::listen(tcp_server_socket, num_users) < 0) {
+                perror("server listen failed");
+                exit(EXIT_FAILURE);
+            }
+        }
+
+        void accept_connection(int& client_socket, struct sockaddr_in& address, int& addrlen) {
+            if ((client_socket = accept(tcp_server_socket, (struct sockaddr *)&address, (socklen_t*)&addrlen)) < 0) 
+            { 
+                perror("server accept failed"); 
+                exit(EXIT_FAILURE); 
+            }
         }
 };
