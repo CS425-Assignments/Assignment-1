@@ -24,9 +24,41 @@ using namespace std;
 // essential data structures
 unordered_map <string, string> users; // username --> password
 unordered_map <int, string> clients; // socket --> client
+unordered_map <string, int> sockets; // client --> socket
 unordered_map <string, unordered_set<int> > groups; // group name --> client sockets
 
-void client_handler(int client_socket )
+void send_message(const unordered_set<int>& recv_sockets,const string message)
+{
+    for (auto& sock : recv_sockets){
+        send(sock, message.c_str(), message.length(), 0);
+    }
+}
+
+void create_group(const string groupname){
+    // assumes group does not exist yet
+
+    groups[groupname] = {};
+
+    // create a lock corresponding to this map
+}
+
+void join_group(const string groupname, const int socket){
+
+    // lock
+    groups[groupname].insert(socket);
+    // unlock
+}
+
+void leave_group (const string groupname, const int socket){
+    // assumes socket is present in group
+
+    // lock
+    auto it = groups[groupname].find(socket);
+    groups[groupname].erase(it);
+    // unlock
+}
+
+void client_handler(int client_socket)
 {
     // pass
 }
@@ -36,6 +68,7 @@ int main() {
     int server_welcome_socket = HTTP_Server.create_and_bind_socket(SERVER_PORT);
 
     users.clear();
+    sockets.clear();
     clients.clear();
     groups.clear();
     
@@ -107,6 +140,7 @@ int main() {
 
         // add client to clients
         clients[client_socket] = username;
+        sockets[username] = client_socket;
 
         // create a thread to handle the client
         thread client_thread(client_handler, client_socket);
