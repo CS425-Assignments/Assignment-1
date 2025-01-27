@@ -29,6 +29,18 @@ mutex users_lock, clients_lock, sockets_lock, groups_lock;
 unordered_map <string, mutex> group_locks;
 unordered_map <int, mutex> client_locks;
 
+enum STATUS
+{
+    SUCCESS = 0,
+    INVALID_GROUP_NAME = -1,
+    INVALID_USER_NAME = -2,
+    USER_OFFLINE = -3,
+    USER_NOT_IN_GROUP = -4,
+    USER_ALREADY_IN_GROUP = -5,
+    GROUP_EXISTS = -6,
+    INVALID_COMMAND = -7
+};
+
 void send_message(const unordered_set<int>& recv_sockets,const string message)
 {
     for (auto &sock : recv_sockets)
@@ -37,31 +49,85 @@ void send_message(const unordered_set<int>& recv_sockets,const string message)
     }
 }
 
-void create_group(const string groupname)
+STATUS create_group(const string group_name)
 {
-    // assumes group does not exist yet
+    groups_lock.lock();
 
-    groups[groupname] = {};
+    if (groups.find(group_name) != groups.end()) 
+    {
+        cout << "Group " << group_name << " already exists." << endl;
+        groups_lock.unlock();
 
-    // create a lock corresponding to this map
+        return GROUP_EXISTS;
+    }
+
+    groups[group_name] = {};
+    group_locks[group_name]; 
+
+    cout << "Group " << group_name << " created." << endl;
+
+    groups_lock.unlock();
+
+    return SUCCESS;
 }
 
-void join_group(const string groupname, const int socket)
+STATUS join_group(const string group_name, const int socket)
 {
+    groups_lock.lock();
 
-    // lock
-    groups[groupname].insert(socket);
-    // unlock
+    if (groups.find(group_name) == groups.end())
+    {
+        cout << "Group " << group_name << " does not exist." << endl;
+        groups_lock.unlock();
+        return INVALID_GROUP_NAME;
+    }
+
+    group_locks[group_name].lock();
+
+    if(groups[group_name].find(socket) != groups[group_name].end())
+    {
+        cout << "Client " << clients[socket] << " already in group." << group_name << endl;
+        group_locks[group_name].unlock();
+        groups_lock.unlock();
+        return USER_ALREADY_IN_GROUP;
+    }
+
+    groups[group_name].insert(socket);
+    cout << "Client " << clients[socket] << " joined group." << group_name << endl;
+    group_locks[group_name].unlock();
+
+    groups_lock.unlock();
+
+    return SUCCESS;
 }
 
-void leave_group(const string groupname, const int socket)
+STATUS leave_group(const string group_name, const int socket)
 {
-    // assumes socket is present in group
+    groups_lock.lock();
 
-    // lock
-    auto it = groups[groupname].find(socket);
-    groups[groupname].erase(it);
-    // unlock
+    if (groups.find(group_name) == groups.end())
+    {
+        cout << "Group " << group_name << " does not exist." << endl;
+        groups_lock.unlock();
+        return INVALID_GROUP_NAME;
+    }
+
+    group_locks[group_name].lock();
+
+    if(groups[group_name].find(socket) == groups[group_name].end())
+    {
+        cout << "Client " << clients[socket] << " not in group." << group_name << endl;
+        group_locks[group_name].unlock();
+        groups_lock.unlock();
+        return USER_NOT_IN_GROUP;
+    }
+
+    groups[group_name].erase(socket);   
+    cout << "Client " << clients[socket] << " left group." << group_name << endl;
+    group_locks[group_name].unlock();
+
+    groups_lock.unlock();
+    return SUCCESS;
 }
 
 void client_handler(int client_socket)

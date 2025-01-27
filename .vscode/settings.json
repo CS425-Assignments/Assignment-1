@@ -1,6 +1,8 @@
 {
     "files.associations": {
         "cstdlib": "cpp",
-        "string": "cpp"
+        "string": "cpp",
+        "mutex": "cpp",
+        "unordered_map": "cpp"
     }
 }
