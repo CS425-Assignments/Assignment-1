@@ -4,8 +4,12 @@
 #include <mutex>
 #include <unordered_map>
 #include <unordered_set>
+#include <string>
 #include <vector>
 #include <sstream>
+#include <iostream>
+#include <sstream>
+#include <string>
 #include <cstring>
 #include <cstdlib>
 #include <unistd.h>
@@ -26,8 +30,8 @@ unordered_map<string, int> sockets;               // client --> socket
 unordered_map<string, unordered_set<int>> groups; // group name --> client sockets
 
 mutex users_lock, clients_lock, sockets_lock, groups_lock;
-unordered_map <string, mutex> group_locks;
-unordered_map <int, mutex> client_locks;
+unordered_map<string, mutex> group_locks;
+unordered_map<int, mutex> client_locks;
 
 enum STATUS
 {
@@ -41,7 +45,7 @@ enum STATUS
     INVALID_COMMAND = -7
 };
 
-STATUS send_message(const unordered_set<int>& recv_sockets,const string message)
+STATUS send_message(const unordered_set<int> &recv_sockets, const string message)
 {
     for (auto &sock : recv_sockets)
     {
@@ -55,7 +59,7 @@ STATUS create_group(const string group_name)
 {
     groups_lock.lock();
 
-    if (groups.find(group_name) != groups.end()) 
+    if (groups.find(group_name) != groups.end())
     {
         cout << "Group " << group_name << " already exists." << endl;
         groups_lock.unlock();
@@ -64,7 +68,7 @@ STATUS create_group(const string group_name)
     }
 
     groups[group_name] = {};
-    group_locks[group_name]; 
+    group_locks[group_name];
 
     cout << "Group " << group_name << " created." << endl;
 
@@ -86,16 +90,16 @@ STATUS join_group(const string group_name, const int socket)
 
     group_locks[group_name].lock();
 
-    if(groups[group_name].find(socket) != groups[group_name].end())
+    if (groups[group_name].find(socket) != groups[group_name].end())
     {
-        cout << "Client " << clients[socket] << " already in group." << group_name << endl;
+        cout << "Client " << clients[socket] << " already in group " << group_name << endl;
         group_locks[group_name].unlock();
         groups_lock.unlock();
         return USER_ALREADY_IN_GROUP;
     }
 
     groups[group_name].insert(socket);
-    cout << "Client " << clients[socket] << " joined group." << group_name << endl;
+    cout << "Client " << clients[socket] << " joined group " << group_name << endl;
     group_locks[group_name].unlock();
 
     groups_lock.unlock();
@@ -116,154 +120,193 @@ STATUS leave_group(const string group_name, const int socket)
 
     group_locks[group_name].lock();
 
-    if(groups[group_name].find(socket) == groups[group_name].end())
+    if (groups[group_name].find(socket) == groups[group_name].end())
     {
-        cout << "Client " << clients[socket] << " not in group." << group_name << endl;
+        cout << "Client " << clients[socket] << " not in group " << group_name << endl;
         group_locks[group_name].unlock();
         groups_lock.unlock();
         return USER_NOT_IN_GROUP;
     }
 
-    groups[group_name].erase(socket);   
-    cout << "Client " << clients[socket] << " left group." << group_name << endl;
+    groups[group_name].erase(socket);
+    cout << "Client " << clients[socket] << " left group " << group_name << endl;
     group_locks[group_name].unlock();
 
     groups_lock.unlock();
     return SUCCESS;
 }
 
+void handle_client_exit(int client_socket)
+{
+    clients_lock.lock();
+    string username = clients[client_socket];
+    clients.erase(client_socket);
+    clients_lock.unlock();
+
+    sockets_lock.lock();
+    sockets.erase(username);
+    sockets_lock.unlock();
+
+    groups_lock.lock();
+    for (auto &[group_name, members] : groups)
+    {
+        lock_guard<mutex> group_lock(group_locks[group_name]);
+        members.erase(client_socket);
+    }
+    groups_lock.unlock();
+
+    close(client_socket);
+    cout << "Client " << username << " disconnected." << endl;
+}
+
+string extract_word(string &str)
+{
+    string first_word = str.substr(0, str.find(' '));
+    str = str.substr(str.find(' ') + 1);
+    return first_word;
+}
+
 void client_handler(int client_socket)
 {
-    bool execute = true;
-    while(execute)
+        while (true)
     {
         char buffer[BUFFER_SIZE];
         memset(buffer, 0, BUFFER_SIZE);
+
         ssize_t bytes_received = recv(client_socket, buffer, BUFFER_SIZE - 1, 0);
-        if (bytes_received == -1) 
+        if (bytes_received <= 0)
         {
-            cerr << "Failed to receive request" << endl;
-            close(client_socket);
-            continue;
+            handle_client_exit(client_socket);
+            break;
         }
 
-        string request(buffer, bytes_received);
-        size_t first_space = request.find(' ');
-        if(first_space == string::npos) {
-            perror("Incorrect message format\n");
-            continue;
-        }
-        string command = request.substr(0, first_space);
+        string request(buffer);
+        string command = extract_word(request);
 
-        if(command == "broadcast")
+        if (command == "/broadcast")
         {
-            string message = request.substr(first_space, request.length() - first_space - 1);
+            string message = request;
             unordered_set<int> recipients;
-            for(const auto& pair : clients) {
-                if(pair.first != client_socket) {  
-                    recipients.insert(pair.first);
+            clients_lock.lock();
+            for (const auto &[sock, user] : clients)
+            {
+                if (sock != client_socket)
+                {
+                    recipients.insert(sock);
                 }
             }
-            STATUS result = send_message(recipients, message);
+            clients_lock.unlock();
+            STATUS result = send_message(recipients, "[Broadcast - " + clients[client_socket] + "] " + message);
+
             if(result == SUCCESS)
             {
                 string response = "Message sent to all online users";
                 send(client_socket, response.c_str(), response.length(), 0);
             }
         }
-        else if(command == "msg")
+        else if (command == "/msg")
         {
-            size_t second_space = request.find(' ', first_space + 1);
-            string recipient_username = request.substr(first_space, second_space - first_space - 1);
-            string message = request.substr(second_space, request.length() - second_space - 1);
-            unordered_set<int> recipients;
-            recipients.insert(sockets[recipient_username]);
-            STATUS result = send_message(recipients, message);
-            if(result == SUCCESS)
+            string recipient = extract_word(request);
+            string message = request;
+            message = "[" + clients[client_socket] + "]" + message;
+
+            sockets_lock.lock();
+            if (sockets.find(recipient) != sockets.end())
             {
-                string response = "Message sent to " + recipient_username;
+                int recipient_socket = sockets[recipient];
+                STATUS result = send_message({recipient_socket}, message);
+                if(result == SUCCESS)
+                {
+                    string response = "Message sent to " + recipient;
+                    send(client_socket, response.c_str(), response.length(), 0);
+                }
+            }
+            else
+            {
+                string response = "User " + recipient + " not found.";
                 send(client_socket, response.c_str(), response.length(), 0);
             }
-            else if(result == INVALID_USER_NAME)
-            {
-                string response = "Invalid user name";
-                send(client_socket, response.c_str(), response.length(), 0);
-            }
-            else if(result == USER_OFFLINE)
-            {
-                string response = recipient_username + " not online";
-                send(client_socket, response.c_str(), response.length(), 0);
-            }  
+            sockets_lock.unlock();
         }
-        else if(command == "join_group")
+        else if (command == "/create_group")
         {
-            string group_name = request.substr(first_space, request.length() - first_space - 1);
+            string group_name = request;
+            STATUS result = create_group(group_name);
+            string response = (result == SUCCESS) ? "Group " + group_name + " created." : "Group already exists.";
+            send(client_socket, response.c_str(), response.length(), 0);
+        }
+        else if (command == "/join_group")
+        {
+            string group_name = request;
             STATUS result = join_group(group_name, client_socket);
-            if(result == SUCCESS)
-            {
-                string response = "You joined the group " + group_name +".";
-                send(client_socket, response.c_str(), response.length(), 0);
-            }
-            else if(result == INVALID_GROUP_NAME)
-            {
-                string response = "Invalid group name";
-                send(client_socket, response.c_str(), response.length(), 0);
-            }
-            else if(result == USER_ALREADY_IN_GROUP)
-            {
-                string response = "You are already in group " + group_name + ".";
-                send(client_socket, response.c_str(), response.length(), 0);
-            }
-        }
-        else if(command == "group_msg")
-        {
-            size_t second_space = request.find(' ', first_space + 1);
-            string group_name = request.substr(first_space, second_space - first_space - 1);
-            string message = request.substr(second_space, request.length() - second_space - 1);
-            unordered_set<int> recipients;
-            if(groups.find(group_name) != groups.end()) {
-                string response = "Invalid group name.";
-                send(client_socket, response.c_str(), response.length(), 0);
-            }
-            else if(groups[group_name].find(client_socket) == groups[group_name].end()) {
-                string response = "You are not a member of thr group.";
-                send(client_socket, response.c_str(), response.length(), 0);
-            }
-            recipients = groups[group_name];
-            recipients.erase(client_socket);
-            STATUS result = send_message(recipients, message); 
-            if(result == SUCCESS) {
-                string response = "Message sent to group.";
-                send(client_socket, response.c_str(), response.length(), 0);
-            }
+
+            string response;
+            if (result == SUCCESS)
+                response = "You joined the group " + group_name + ".";
+            else if (result == INVALID_GROUP_NAME)
+                response = "Group does not exist.";
+            else
+                response = "You are already in the group.";
+
+            send(client_socket, response.c_str(), response.length(), 0);
         }
         else if(command == "leave_group")
         {
-            string group_name = request.substr(first_space, request.length() - first_space - 1);
+            string group_name = request;
+
             STATUS result = leave_group(group_name, client_socket);
-            if(result == INVALID_GROUP_NAME) {
-                string response = "Invalid group name.";
-                send(client_socket, response.c_str(), response.length(), 0);
-            }
-            else if(result == USER_NOT_IN_GROUP) {
-                string response = "You are not a member of thr group.";
-                send(client_socket, response.c_str(), response.length(), 0);
-            }
-            else if(result == SUCCESS) {
-                string response = "You left the group " + group_name + ".";
-                send(client_socket, response.c_str(), response.length(), 0);
-            }
-        }
-        else if(command == "exit")
-        {
-            execute = false;
-            string response = "Goodbye, closing session.";
+
+            string response;
+            if (result == SUCCESS)
+                response = "You left the group " + group_name + ".";
+            else if (result == INVALID_GROUP_NAME)
+                response = "Group does not exist.";
+            else
+                response = "You are not in the group.";
+
             send(client_socket, response.c_str(), response.length(), 0);
-            close(client_socket);
         }
-        else 
+        else if (command == "/group_msg")
         {
-            string response = "HTTP/1.1 405 Method Not Allowed\r\nContent-Type: text/html\r\n\r\n<html><body><h1>405 Method Not Allowed</h1></body></html>";
+            string group_name = extract_word(request);
+            string message = request;
+            message = "[Group " + group_name + " - " + clients[client_socket] + "]" + message;
+
+            groups_lock.lock();
+            if (groups.find(group_name) == groups.end())
+            {
+                string response = "Group " + group_name + " does not exist.";
+                send(client_socket, response.c_str(), response.length(), 0);
+                groups_lock.unlock();
+                continue;
+            }
+
+            group_locks[group_name].lock();
+            unordered_set<int> recipients = groups[group_name];
+
+            if(recipients.find(client_socket) == recipients.end())
+            {
+                string response = "You are not in the group.";
+                send(client_socket, response.c_str(), response.length(), 0);
+                group_locks[group_name].unlock();
+                groups_lock.unlock();
+                continue;
+            }
+
+            recipients.erase(client_socket);
+            send_message(recipients, message);
+            group_locks[group_name].unlock();
+            groups_lock.unlock();
+        }
+
+        else if (command == "/exit")
+        {
+            handle_client_exit(client_socket);
+            break;
+        }
+        else
+        {
+            string response = "Invalid command.";
             send(client_socket, response.c_str(), response.length(), 0);
         }
     }
@@ -271,51 +314,54 @@ void client_handler(int client_socket)
 
 bool authenticate_user(int client_socket)
 {
-    // Authenticate user
     char buffer[BUFFER_SIZE];
     memset(buffer, 0, BUFFER_SIZE);
-    
-    string username_message = "Enter the user name : ";
-    send(client_socket, username_message.c_str(), username_message.length(), 0);
 
-    int bytes_received = recv(client_socket, buffer, BUFFER_SIZE, 0);
-    if (bytes_received <= 0)
-    {
-        perror("Username receive failed.");
-        return false;
-    }
-    string username = buffer;
+    string username_prompt = "Enter username: ";
+    send(client_socket, username_prompt.c_str(), username_prompt.length(), 0);
+    recv(client_socket, buffer, BUFFER_SIZE, 0);
+    string username(buffer);
 
     memset(buffer, 0, BUFFER_SIZE);
-    string password_message = "Enter the password : ";
-    send(client_socket, password_message.c_str(), password_message.length(), 0);
+    string password_prompt = "Enter password: ";
+    send(client_socket, password_prompt.c_str(), password_prompt.length(), 0);
+    recv(client_socket, buffer, BUFFER_SIZE, 0);
+    string password(buffer);
 
-    bytes_received = recv(client_socket, buffer, BUFFER_SIZE, 0);
-    if (bytes_received <= 0)
-    {
-        perror("Password receive failed");
-        return false;
-    }
-    string password = buffer;
-
+    users_lock.lock();
     if (users.find(username) == users.end() || users[username] != password)
     {
-        string authentication_failed = "Authentication failed";
-        send(client_socket, authentication_failed.c_str(), authentication_failed.length(), 0);
+        string auth_failed = "Authentication failed.";
+        send(client_socket, auth_failed.c_str(), auth_failed.length(), 0);
+        users_lock.unlock();
         close(client_socket);
         return false;
     }
+    users_lock.unlock();
 
-    string welcome = "Welcome to the chat server!";
-    send(client_socket, welcome.c_str(), welcome.length(), 0);
+    string welcome_message = "Welcome, " + username + "!";
+    send(client_socket, welcome_message.c_str(), welcome_message.length(), 0);
 
-    // Update the mappings
+    clients_lock.lock();
     clients[client_socket] = username;
+    unordered_set<int> recipients;
+    for (const auto &[sock, user] : clients)
+    {
+        if (sock != client_socket)
+        {
+            recipients.insert(sock);
+        }
+    }
+    clients_lock.unlock();
+
+    sockets_lock.lock();
     sockets[username] = client_socket;
+    sockets_lock.unlock();
 
-    // Create a thread to handle the client
+    string join_message = username + " has joined the chat.";
+    send_message(recipients, join_message);
+
     thread client_thread(client_handler, client_socket);
-
     client_thread.detach();
     return true;
 }
