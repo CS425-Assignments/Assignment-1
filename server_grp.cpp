@@ -49,7 +49,9 @@ STATUS send_message(const unordered_set<int> &recv_sockets, const string message
 {
     for (auto &sock : recv_sockets)
     {
+        client_locks[sock].lock();
         send(sock, message.c_str(), message.length(), 0);
+        client_locks[sock].unlock();
     }
 
     return SUCCESS;
