@@ -15,8 +15,7 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <fstream>
-#include "tcp_server.cpp"
-#include "utilities.cpp"
+#include "http_server.cpp"
 
 #define BUFFER_SIZE 1024
 #define SERVER_PORT 12345
@@ -170,7 +169,7 @@ string extract_word(string &str)
 
 void client_handler(int client_socket)
 {
-        while (true)
+    while (true)
     {
         char buffer[BUFFER_SIZE];
         memset(buffer, 0, BUFFER_SIZE);
@@ -370,30 +369,9 @@ bool authenticate_user(int client_socket)
 
 int main()
 {
-    users.clear();
-    sockets.clear();
-    clients.clear();
-    groups.clear();
-    users = initialise_users();
-
-    TCP_Server HTTP_Server;
-    HTTP_Server.create_and_bind_socket(SERVER_PORT);
-    int num_users = users.size();
-    HTTP_Server.start_listening(num_users);
-
-    // Accept incoming connections
-    struct sockaddr_in address;
-    int addrlen = sizeof(address);
-    int client_socket;
-
-    while (true)
-    {
-        HTTP_Server.accept_connection(client_socket, address, addrlen);
-
-        if(!authenticate_user(client_socket))
-        {
-            close(client_socket);
-            continue;
-        }
-    }
+    HTTP_Server ChatServer;
+    ChatServer.create_server(SERVER_PORT);
+    ChatServer.start_listening(MAX_USERS);
+    ChatServer.continuous_accept();
+    return 0;
 }

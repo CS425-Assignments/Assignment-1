@@ -39,3 +39,9 @@ unordered_map<string, string> initialise_users()
     }
     return users;
 }
+
+string extract_word(string& str) {
+    string first_word = str.substr(0, str.find(' '));
+    str = str.substr(str.find(' ') + 1);
+    return first_word;
+}
