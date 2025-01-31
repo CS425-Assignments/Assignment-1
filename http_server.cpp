@@ -80,36 +80,174 @@ class HTTP_Server : public TCP_Server
         string join_message = username + " has joined the chat.";
         send_message(recipients, join_message);
 
-        thread client_thread(client_handler, client_socket);
+        // Using lambda:
+        thread client_thread([this, client_socket]() {
+            this->client_handler(client_socket);
+        });
+
         client_thread.detach();
         return true;
     }
 
+    // error handling
+    string errmsg(STATUS status){
+        switch (status)
+        {
+        case INVALID_GROUP_NAME:
+            return "Invalid group name.";
+        case INVALID_USER_NAME:
+            return "Invalid user name.";
+        case USER_OFFLINE:
+            return "User is offline.";
+        case USER_NOT_IN_GROUP:
+            return "User is not in group.";
+        case USER_ALREADY_IN_GROUP:
+            return "User is already in group.";
+        case GROUP_EXISTS:
+            return "Group already exists.";
+        case INVALID_COMMAND:
+            return "Invalid command.";
+        default:
+            return "Unknown error.";
+        }
+    }
+
     // handlers for commands, to be shifted
     void handle_broadcast(int client_socket, const string& message){
-        // string client = clients[client_socket];
+        string client = clients[client_socket];
 
-        // string response = "[Broadcast from " + client + "]: " + message;
+        string response = "[Broadcast from " + client + "]: " + message;
+
+        unordered_set<int> recipients;
+        clients_lock.lock();
+        for (const auto &[sock, user] : clients)
+        {
+            if (sock != client_socket)
+            {
+                recipients.insert(sock);
+            }
+        }
+        clients_lock.unlock();
+
+        STATUS result = send_message(recipients, response);
+
+        if (result != SUCCESS)
+        {
+            string response = errmsg(result);
+            send(client_socket, response.c_str(), response.length(), 0);
+        } // is this fine?
     }
 
     void handle_private_message(int client_socket, string& request){
-        
+
+        string client = clients[client_socket];
+        string recipient = extract_word(request);
+        string message = request;
+
+        string response = "[" + client + "]: " + message;
+
+        unordered_set<int> recipients;
+        sockets_lock.lock();
+        recipients.insert(sockets[recipient]);
+        sockets_lock.unlock();
+
+        STATUS result = send_message(recipients, response);
+
+        if (result != SUCCESS)
+        {
+            string response = errmsg(result);
+            send(client_socket, response.c_str(), response.length(), 0);
+        } // is this fine?
     }
 
     void handle_create_group(int client_socket, const string& group_name){
 
+        STATUS result = create_group(group_name);
+
+        string response;
+        if (result == SUCCESS)
+        {
+            response = "Group " + group_name + " created.";
+            result = join_group(group_name, client_socket);
+            // uncaught error?
+        }
+        else
+        {
+            response = errmsg(result);
+        }
+
+        send(client_socket, response.c_str(), response.length(), 0);
     }
 
     void handle_join_group(int client_socket, const string& group_name){
+        
+        STATUS result = join_group(group_name, client_socket);
 
+        string response;
+        if (result == SUCCESS)
+        {
+            response = "You joined the group " + group_name + ".";
+
+            string join_message = clients[client_socket] + " joined the group.";
+
+            unordered_set<int> recipients;
+            clients_lock.lock();
+            for (const auto &[sock, user] : clients)
+            {
+                if (sock != client_socket)
+                {
+                    recipients.insert(sock);
+                }
+            }
+            clients_lock.unlock();
+
+            send_message(recipients, response);
+        }
+        else
+        {
+            response = errmsg(result);
+        }
+
+        send(client_socket, response.c_str(), response.length(), 0);
     }
 
     void handle_leave_group(int client_socket, const string& group_name){
+        
+        STATUS result = leave_group(group_name, client_socket);
 
+        string response;
+        if (result == SUCCESS)
+        {
+            response = "You left the group " + group_name + ".";
+        }
+        else
+        {
+            response = errmsg(result);
+        }
+
+        send(client_socket, response.c_str(), response.length(), 0);
     }
 
-    void handle_group_message(int client_socket, const string& request){
+    void handle_group_message(int client_socket, string& request){
+        string group_name = extract_word(request);
+        string message = request;
+        message = "[Group " + group_name + "]: " + message;
 
+        groups_lock.lock();
+        if (groups.find(group_name) == groups.end())
+        {
+            string response = "Group " + group_name + " does not exist.";
+            send(client_socket, response.c_str(), response.length(), 0);
+            groups_lock.unlock();
+            return;
+        }
+
+        group_locks[group_name].lock();
+        unordered_set<int> recipients = groups[group_name];
+        group_locks[group_name].unlock();
+        groups_lock.unlock();
+
+        send_message(recipients, message);
     }
 
     void handle_client_exit(int client_socket){
@@ -125,8 +263,9 @@ class HTTP_Server : public TCP_Server
         groups_lock.lock();
         for (auto &[group_name, members] : groups)
         {
-            lock_guard<mutex> group_lock(group_locks[group_name]);
+            group_locks[group_name].lock();
             members.erase(client_socket);
+            group_locks[group_name].unlock();
         }
         groups_lock.unlock();
 
