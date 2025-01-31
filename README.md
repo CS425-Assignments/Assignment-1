@@ -28,3 +28,12 @@ This repository consists of the codebase for the implementation of a live-chat s
 ## Instructions
 
 ## Documentation
+
+## Some Issues
+
+1. `http_server.cpp` : line 164, what if an error is encountered in join?
+2. `http_server.cpp` : line 132 & 150, what is error handling for send_message, have i done it right?
+3. `Makefile` does not have `http_server.cpp` so if it is updated, make does not update it, it's an issue
+4. `http_server.cpp` : line 381, no need to define, it's inherited from parent class, TCP_Server
+5. `http_server.cpp` : line 204 : how to handle error?
+6. `http_server.cpp` : does leaving the group inform everyone? If yes then have to implement that.
