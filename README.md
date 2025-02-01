@@ -37,4 +37,3 @@ This repository consists of the codebase for the implementation of a live-chat s
 4. `http_server.cpp` : line 381, no need to define, it's inherited from parent class, TCP_Server
 5. `http_server.cpp` : line 204 : how to handle error?
 6. `http_server.cpp` : does leaving the group inform everyone? If yes then have to implement that.
-7. Bug : Joining group informs the members by saying "You joined the group" instead of "<name> joined the group".

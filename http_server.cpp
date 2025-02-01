@@ -187,21 +187,6 @@ class HTTP_Server : public TCP_Server
         if (result == SUCCESS)
         {
             response = "You joined the group " + group_name + ".";
-
-            string join_message = clients[client_socket] + " joined the group.";
-
-            unordered_set<int> recipients;
-            clients_lock.lock();
-            for (const auto &[sock, user] : clients)
-            {
-                if (sock != client_socket)
-                {
-                    recipients.insert(sock);
-                }
-            }
-            clients_lock.unlock();
-
-            send_message(recipients, response);
         }
         else
         {
