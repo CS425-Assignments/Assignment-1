@@ -140,7 +140,19 @@ class HTTP_Server : public TCP_Server
 
     void handle_private_message(int client_socket, string& request){
 
+		clients_lock.lock();
+		if ( clients.find(client_socket) == clients.end()) {
+			clients_lock.unlock();
+			string response = errmsg(USER_OFFLINE);
+
+			client_locks[client_socket].lock();
+            send(client_socket, response.c_str(), response.length(), 0);
+			client_locks[client_socket].unlock();
+		}
+
         string client = clients[client_socket];
+		clients_lock.unlock();
+
         string recipient = extract_word(request);
         string message = request;
 
@@ -156,7 +168,9 @@ class HTTP_Server : public TCP_Server
         if (result != SUCCESS)
         {
             string response = errmsg(result);
+			client_locks[client_socket].lock();
             send(client_socket, response.c_str(), response.length(), 0);
+			client_locks[client_socket].unlock();
         } // is this fine?
     }
 
@@ -176,7 +190,9 @@ class HTTP_Server : public TCP_Server
             response = errmsg(result);
         }
 
-        send(client_socket, response.c_str(), response.length(), 0);
+		client_locks[client_socket].lock();
+		send(client_socket, response.c_str(), response.length(), 0);
+		client_locks[client_socket].unlock();
     }
 
     void handle_join_group(int client_socket, const string& group_name){
@@ -193,7 +209,6 @@ class HTTP_Server : public TCP_Server
             response = errmsg(result);
         }
 
-        send(client_socket, response.c_str(), response.length(), 0);
     }
 
     void handle_leave_group(int client_socket, const string& group_name){
@@ -210,7 +225,6 @@ class HTTP_Server : public TCP_Server
             response = errmsg(result);
         }
 
-        send(client_socket, response.c_str(), response.length(), 0);
     }
 
     void handle_group_message(int client_socket, string& request){
@@ -222,13 +236,16 @@ class HTTP_Server : public TCP_Server
         if (groups.find(group_name) == groups.end())
         {
             string response = "Group " + group_name + " does not exist.";
-            send(client_socket, response.c_str(), response.length(), 0);
             groups_lock.unlock();
             return;
         }
 
         group_locks[group_name].lock();
         unordered_set<int> recipients = groups[group_name];
+
+		auto it = recipients.find(client_socket);
+		recipients.erase(it);
+
         group_locks[group_name].unlock();
         groups_lock.unlock();
 
@@ -419,7 +436,6 @@ class HTTP_Server : public TCP_Server
             }
             else {
                 string response = "Invalid command.";
-                send(client_socket, response.c_str(), response.length(), 0);
             }
         }
     }
