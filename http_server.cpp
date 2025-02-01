@@ -171,7 +171,7 @@ class HTTP_Server : public TCP_Server
 			client_locks[client_socket].lock();
             send(client_socket, response.c_str(), response.length(), 0);
 			client_locks[client_socket].unlock();
-        } // is this fine?
+        }
     }
 
     void handle_create_group(int client_socket, const string& group_name){
@@ -183,7 +183,6 @@ class HTTP_Server : public TCP_Server
         {
             response = "Group " + group_name + " created.";
             result = join_group(group_name, client_socket);
-            // uncaught error?
         }
         else
         {
