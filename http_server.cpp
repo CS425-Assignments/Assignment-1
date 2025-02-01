@@ -112,7 +112,7 @@ class HTTP_Server : public TCP_Server
         }
     }
 
-    // handlers for commands, to be shifted
+    // handlers for commands
     void handle_broadcast(int client_socket, const string& message){
         string client = clients[client_socket];
 
@@ -378,10 +378,7 @@ class HTTP_Server : public TCP_Server
         users = initialise_users();
         create_and_bind_socket(PORT);
     }
-    // void start_listening(int num_users)
-    // {
-    //     start_listening(num_users);
-    // } already defined in TCP_Server
+
     void continuous_accept()
     {
         struct sockaddr_in address;
