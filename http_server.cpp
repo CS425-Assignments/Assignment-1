@@ -27,7 +27,8 @@ class HTTP_Server : public TCP_Server
         USER_NOT_IN_GROUP = -4,
         USER_ALREADY_IN_GROUP = -5,
         GROUP_EXISTS = -6,
-        INVALID_COMMAND = -7
+        USER_ALREADY_ONLINE = -7,
+        INVALID_COMMAND = -8
     };
 
     static const int BUFFER_SIZE = 1024;
@@ -50,7 +51,7 @@ class HTTP_Server : public TCP_Server
         sockets_lock.lock();
         if (sockets.find(username) != sockets.end())
         {
-            string response = "Error: User already logged in.";
+            string response = errmsg(USER_ALREADY_ONLINE);
             send(client_socket, response.c_str(), response.length(), 0);
             sockets_lock.unlock();
             close(client_socket);
@@ -102,25 +103,31 @@ class HTTP_Server : public TCP_Server
 
     // error handling
     string errmsg(STATUS status){
+
+        string msg = "Error: ";
         switch (status)
         {
         case INVALID_GROUP_NAME:
-            return "Invalid group name.";
+            msg += "Invalid group name.";
         case INVALID_USER_NAME:
-            return "Invalid user name.";
+            msg += "Invalid user name.";
         case USER_OFFLINE:
-            return "User is offline.";
+            msg += "User is offline.";
         case USER_NOT_IN_GROUP:
-            return "User is not in group.";
+            msg += "User is not in group.";
         case USER_ALREADY_IN_GROUP:
-            return "User is already in group.";
+            msg += "User is already in group.";
         case GROUP_EXISTS:
-            return "Group already exists.";
+            msg += "Group already exists.";
         case INVALID_COMMAND:
-            return "Invalid command.";
+            msg += "Invalid command.";
+        case USER_ALREADY_ONLINE:
+            msg += "User is already logged in.";
         default:
-            return "Unknown error.";
+            msg += "Unknown error.";
         }
+
+        return msg;
     }
 
     // handlers for commands
