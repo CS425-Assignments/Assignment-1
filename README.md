@@ -14,15 +14,15 @@ This repository consists of the codebase for the implementation of a live-chat s
 
 ## Content
 
-- `A1.pdf`
-- `server_grp.cpp`
-- `client_grp.cpp`
-- `tcp_server.cpp`
-- `chat_server.cpp`
-- `utilities.cpp`
-- `users.txt`
-- `Makefile`
-- `README.md`
+- `A1.pdf` - Assigment Description
+- `server_grp.cpp` - Driver code for server
+- `client_grp.cpp` - Driver code for client
+- `tcp_server.cpp` - Basic TCP Server
+- `chat_server.cpp` - Chat server built on top of TCP Server
+- `utilities.cpp` - Utility functions
+- `users.txt` - Users and Passwords
+- `Makefile` - Builder file
+- `README.md` - Self-explainatory
 
 ## Requirements
 
@@ -164,11 +164,3 @@ I hereby declare that the work presented in this assignment is solely done by us
 I hereby declare that the work presented in this assignment is solely done by us and has not been copied from any unattributed sources.
 
 ### Feedback
-
-## Some Issues
-
-1. `http_server.cpp` : line 164, what if an error is encountered in join?
-2. `http_server.cpp` : line 132 & 150, what is error handling for send_message, have i done it right?
-3. `Makefile` does not have `http_server.cpp` so if it is updated, make does not update it, it's an issue
-4. `http_server.cpp` : line 204 : how to handle error?
-5. how to connect?
