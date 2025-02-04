@@ -15,7 +15,7 @@
 #include "tcp_server.cpp"
 #include "utilities.cpp"
 
-class HTTP_Server : public TCP_Server
+class Chat_Server : public TCP_Server
 {
     private :
 
