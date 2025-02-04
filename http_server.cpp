@@ -28,7 +28,8 @@ class HTTP_Server : public TCP_Server
         USER_ALREADY_IN_GROUP = -5,
         GROUP_EXISTS = -6,
         USER_ALREADY_ONLINE = -7,
-        INVALID_COMMAND = -8
+        INVALID_COMMAND = -8,
+        SENDING_TO_SELF = -9
     };
 
     static const int BUFFER_SIZE = 1024;
@@ -51,10 +52,7 @@ class HTTP_Server : public TCP_Server
         sockets_lock.lock();
         if (sockets.find(username) != sockets.end())
         {
-            string response = errmsg(USER_ALREADY_ONLINE);
-            send(client_socket, response.c_str(), response.length(), 0);
-            sockets_lock.unlock();
-            close(client_socket);
+            sendError(USER_ALREADY_ONLINE, client_socket);
             return false;
         }
         sockets_lock.unlock();
@@ -102,7 +100,7 @@ class HTTP_Server : public TCP_Server
     }
 
     // error handling
-    string errmsg(STATUS status){
+    void sendError(STATUS status, int recv_socket ){
 
         string msg = "Error: ";
         switch (status)
@@ -131,12 +129,17 @@ class HTTP_Server : public TCP_Server
         case USER_ALREADY_ONLINE:
             msg += "User is already logged in.";
             break;
+        case SENDING_TO_SELF:
+            msg += "Cannot send message to self.";
+            break;
         default:
             msg += "Unknown error.";
             break;
         }
 
-        return msg;
+        client_locks[recv_socket].lock();
+        send(recv_socket, msg.c_str(), msg.length(), 0);
+        client_locks[recv_socket].unlock();
     }
 
     // handlers for commands
@@ -160,8 +163,7 @@ class HTTP_Server : public TCP_Server
 
         if (result != SUCCESS)
         {
-            string response = errmsg(result);
-            send(client_socket, response.c_str(), response.length(), 0);
+            sendError(result, client_socket);
         } // is this fine?
     }
 
@@ -176,20 +178,23 @@ class HTTP_Server : public TCP_Server
 
         sockets_lock.lock();
 		if ( sockets.find(recipient) == sockets.end()) {
-			clients_lock.unlock();
-			string response = errmsg(USER_OFFLINE);
-
-			client_locks[client_socket].lock();
-            send(client_socket, response.c_str(), response.length(), 0);
-			client_locks[client_socket].unlock();
-
             sockets_lock.unlock();
+
+			sendError(USER_OFFLINE, client_socket);
+
             return;
 		}
 
         int recv_socket = sockets[recipient];
 
         sockets_lock.unlock();
+
+        if ( recv_socket == client_socket ) {
+
+            sendError(SENDING_TO_SELF, client_socket);
+
+            return;
+        }
 
         string response = "[" + client + "]: " + message;
 
@@ -200,10 +205,7 @@ class HTTP_Server : public TCP_Server
 
         if (result != SUCCESS)
         {
-            string response = errmsg(result);
-			client_locks[client_socket].lock();
-            send(client_socket, response.c_str(), response.length(), 0);
-			client_locks[client_socket].unlock();
+            sendError(result, client_socket);
         }
     }
 
@@ -219,7 +221,8 @@ class HTTP_Server : public TCP_Server
         }
         else
         {
-            response = errmsg(result);
+            sendError(result, client_socket);
+            return;
         }
 
 		client_locks[client_socket].lock();
@@ -235,15 +238,14 @@ class HTTP_Server : public TCP_Server
         if (result == SUCCESS)
         {
             response = "You joined the group " + group_name + ".";
+            client_locks[client_socket].lock();
+            send(client_socket, response.c_str(), response.length(), 0);
+            client_locks[client_socket].unlock();
         }
         else
         {
-            response = errmsg(result);
+            sendError(result, client_socket);
         }
-		client_locks[client_socket].lock();
-		send(client_socket, response.c_str(), response.length(), 0);
-		client_locks[client_socket].unlock();
-
     }
 
     void handle_leave_group(int client_socket, const string& group_name){
@@ -254,14 +256,14 @@ class HTTP_Server : public TCP_Server
         if (result == SUCCESS)
         {
             response = "You left the group " + group_name + ".";
+            client_locks[client_socket].lock();
+            send(client_socket, response.c_str(), response.length(), 0);
+            client_locks[client_socket].unlock();
         }
         else
         {
-            response = errmsg(result);
+            sendError(result, client_socket);
         }
-		client_locks[client_socket].lock();
-		send(client_socket, response.c_str(), response.length(), 0);
-		client_locks[client_socket].unlock();
 
     }
 
@@ -274,13 +276,9 @@ class HTTP_Server : public TCP_Server
 
         if (groups.find(group_name) == groups.end())
         {
-            string response = errmsg(INVALID_GROUP_NAME);
-
-            client_locks[client_socket].lock();
-            send(client_socket, response.c_str(), response.length(), 0);
-            client_locks[client_socket].unlock();
-
             groups_lock.unlock();
+            sendError(INVALID_GROUP_NAME, client_socket);
+
             return;
         }
 
@@ -290,14 +288,10 @@ class HTTP_Server : public TCP_Server
 		auto it = recipients.find(client_socket);
 
         if (it == recipients.end()) {
-            string response = errmsg(USER_NOT_IN_GROUP);
-
-            client_locks[client_socket].lock();
-            send(client_socket, response.c_str(), response.length(), 0);
-            client_locks[client_socket].unlock();
-
             group_locks[group_name].unlock();
             groups_lock.unlock();
+
+            sendError(USER_NOT_IN_GROUP, client_socket);
             return;
         }
         
@@ -492,11 +486,7 @@ class HTTP_Server : public TCP_Server
                 break;
             }
             else {
-                string response = errmsg(INVALID_COMMAND);
-
-                client_locks[client_socket].lock();
-                send(client_socket, response.c_str(), response.length(), 0);
-                client_locks[client_socket].unlock();
+                sendError(INVALID_COMMAND, client_socket);
             }
         }
     }
