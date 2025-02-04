@@ -467,7 +467,11 @@ class HTTP_Server : public TCP_Server
                 break;
             }
             else {
-                string response = "Invalid command.";
+                string response = errmsg(INVALID_COMMAND);
+
+                client_locks[client_socket].lock();
+                send(client_socket, response.c_str(), response.length(), 0);
+                client_locks[client_socket].unlock();
             }
         }
     }
