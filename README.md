@@ -18,8 +18,11 @@ This repository consists of the codebase for the implementation of a live-chat s
 - `server_grp.cpp`
 - `client_grp.cpp`
 - `tcp_server.cpp`
+- `http_server.cpp`
 - `utilities.cpp`
 - `users.txt`
+- `Makefile`
+- `README.md`
 
 ## Requirements
 
@@ -28,6 +31,26 @@ This repository consists of the codebase for the implementation of a live-chat s
 ## Instructions
 
 ## Documentation
+
+### Features
+
+### Design Decisions
+
+### Implementation Details
+
+### Testing
+
+### Restrictions in our server
+
+### Challenges
+
+### Contributions
+
+### Sources 
+
+### Decalarations
+
+### Feedback
 
 ## Some Issues
 
