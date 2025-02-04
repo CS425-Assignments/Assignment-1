@@ -109,22 +109,31 @@ class HTTP_Server : public TCP_Server
         {
         case INVALID_GROUP_NAME:
             msg += "Invalid group name.";
+            break;
         case INVALID_USER_NAME:
             msg += "Invalid user name.";
+            break;
         case USER_OFFLINE:
             msg += "User is offline.";
+            break;
         case USER_NOT_IN_GROUP:
             msg += "User is not in group.";
+            break;
         case USER_ALREADY_IN_GROUP:
             msg += "User is already in group.";
+            break;
         case GROUP_EXISTS:
             msg += "Group already exists.";
+            break;
         case INVALID_COMMAND:
             msg += "Invalid command.";
+            break;
         case USER_ALREADY_ONLINE:
             msg += "User is already logged in.";
+            break;
         default:
             msg += "Unknown error.";
+            break;
         }
 
         return msg;
