@@ -27,7 +27,9 @@ class HTTP_Server : public TCP_Server
         USER_NOT_IN_GROUP = -4,
         USER_ALREADY_IN_GROUP = -5,
         GROUP_EXISTS = -6,
-        INVALID_COMMAND = -7
+        USER_ALREADY_ONLINE = -7,
+        INVALID_COMMAND = -8,
+        SENDING_TO_SELF = -9
     };
 
     static const int BUFFER_SIZE = 1024;
@@ -50,10 +52,7 @@ class HTTP_Server : public TCP_Server
         sockets_lock.lock();
         if (sockets.find(username) != sockets.end())
         {
-            string response = "Error: User already logged in.";
-            send(client_socket, response.c_str(), response.length(), 0);
-            sockets_lock.unlock();
-            close(client_socket);
+            sendError(USER_ALREADY_ONLINE, client_socket);
             return false;
         }
         sockets_lock.unlock();
@@ -101,26 +100,46 @@ class HTTP_Server : public TCP_Server
     }
 
     // error handling
-    string errmsg(STATUS status){
+    void sendError(STATUS status, int recv_socket ){
+
+        string msg = "Error: ";
         switch (status)
         {
         case INVALID_GROUP_NAME:
-            return "Invalid group name.";
+            msg += "Invalid group name.";
+            break;
         case INVALID_USER_NAME:
-            return "Invalid user name.";
+            msg += "Invalid user name.";
+            break;
         case USER_OFFLINE:
-            return "User is offline.";
+            msg += "User is offline.";
+            break;
         case USER_NOT_IN_GROUP:
-            return "User is not in group.";
+            msg += "User is not in group.";
+            break;
         case USER_ALREADY_IN_GROUP:
-            return "User is already in group.";
+            msg += "User is already in group.";
+            break;
         case GROUP_EXISTS:
-            return "Group already exists.";
+            msg += "Group already exists.";
+            break;
         case INVALID_COMMAND:
-            return "Invalid command.";
+            msg += "Invalid command.";
+            break;
+        case USER_ALREADY_ONLINE:
+            msg += "User is already logged in.";
+            break;
+        case SENDING_TO_SELF:
+            msg += "Cannot send message to self.";
+            break;
         default:
-            return "Unknown error.";
+            msg += "Unknown error.";
+            break;
         }
+
+        client_locks[recv_socket].lock();
+        send(recv_socket, msg.c_str(), msg.length(), 0);
+        client_locks[recv_socket].unlock();
     }
 
     // handlers for commands
@@ -144,44 +163,49 @@ class HTTP_Server : public TCP_Server
 
         if (result != SUCCESS)
         {
-            string response = errmsg(result);
-            send(client_socket, response.c_str(), response.length(), 0);
+            sendError(result, client_socket);
         } // is this fine?
     }
 
     void handle_private_message(int client_socket, string& request){
 
 		clients_lock.lock();
-		if ( clients.find(client_socket) == clients.end()) {
-			clients_lock.unlock();
-			string response = errmsg(USER_OFFLINE);
-
-			client_locks[client_socket].lock();
-            send(client_socket, response.c_str(), response.length(), 0);
-			client_locks[client_socket].unlock();
-		}
-
         string client = clients[client_socket];
 		clients_lock.unlock();
 
         string recipient = extract_word(request);
         string message = request;
 
+        sockets_lock.lock();
+		if ( sockets.find(recipient) == sockets.end()) {
+            sockets_lock.unlock();
+
+			sendError(USER_OFFLINE, client_socket);
+
+            return;
+		}
+
+        int recv_socket = sockets[recipient];
+
+        sockets_lock.unlock();
+
+        if ( recv_socket == client_socket ) {
+
+            sendError(SENDING_TO_SELF, client_socket);
+
+            return;
+        }
+
         string response = "[" + client + "]: " + message;
 
         unordered_set<int> recipients;
-        sockets_lock.lock();
-        recipients.insert(sockets[recipient]);
-        sockets_lock.unlock();
+        recipients.insert(recv_socket);
 
         STATUS result = send_message(recipients, response);
 
         if (result != SUCCESS)
         {
-            string response = errmsg(result);
-			client_locks[client_socket].lock();
-            send(client_socket, response.c_str(), response.length(), 0);
-			client_locks[client_socket].unlock();
+            sendError(result, client_socket);
         }
     }
 
@@ -197,7 +221,8 @@ class HTTP_Server : public TCP_Server
         }
         else
         {
-            response = errmsg(result);
+            sendError(result, client_socket);
+            return;
         }
 
 		client_locks[client_socket].lock();
@@ -213,15 +238,14 @@ class HTTP_Server : public TCP_Server
         if (result == SUCCESS)
         {
             response = "You joined the group " + group_name + ".";
+            client_locks[client_socket].lock();
+            send(client_socket, response.c_str(), response.length(), 0);
+            client_locks[client_socket].unlock();
         }
         else
         {
-            response = errmsg(result);
+            sendError(result, client_socket);
         }
-		client_locks[client_socket].lock();
-		send(client_socket, response.c_str(), response.length(), 0);
-		client_locks[client_socket].unlock();
-
     }
 
     void handle_leave_group(int client_socket, const string& group_name){
@@ -232,14 +256,14 @@ class HTTP_Server : public TCP_Server
         if (result == SUCCESS)
         {
             response = "You left the group " + group_name + ".";
+            client_locks[client_socket].lock();
+            send(client_socket, response.c_str(), response.length(), 0);
+            client_locks[client_socket].unlock();
         }
         else
         {
-            response = errmsg(result);
+            sendError(result, client_socket);
         }
-		client_locks[client_socket].lock();
-		send(client_socket, response.c_str(), response.length(), 0);
-		client_locks[client_socket].unlock();
 
     }
 
@@ -249,10 +273,12 @@ class HTTP_Server : public TCP_Server
         message = "[Group " + group_name + "]: " + message;
 
         groups_lock.lock();
+
         if (groups.find(group_name) == groups.end())
         {
-            string response = "Group " + group_name + " does not exist.";
             groups_lock.unlock();
+            sendError(INVALID_GROUP_NAME, client_socket);
+
             return;
         }
 
@@ -260,6 +286,15 @@ class HTTP_Server : public TCP_Server
         unordered_set<int> recipients = groups[group_name];
 
 		auto it = recipients.find(client_socket);
+
+        if (it == recipients.end()) {
+            group_locks[group_name].unlock();
+            groups_lock.unlock();
+
+            sendError(USER_NOT_IN_GROUP, client_socket);
+            return;
+        }
+        
 		recipients.erase(it);
 
         group_locks[group_name].unlock();
@@ -451,7 +486,7 @@ class HTTP_Server : public TCP_Server
                 break;
             }
             else {
-                string response = "Invalid command.";
+                sendError(INVALID_COMMAND, client_socket);
             }
         }
     }
