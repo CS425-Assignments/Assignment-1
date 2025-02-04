@@ -168,7 +168,14 @@ class HTTP_Server : public TCP_Server
     void handle_private_message(int client_socket, string& request){
 
 		clients_lock.lock();
-		if ( clients.find(client_socket) == clients.end()) {
+        string client = clients[client_socket];
+		clients_lock.unlock();
+
+        string recipient = extract_word(request);
+        string message = request;
+
+        sockets_lock.lock();
+		if ( sockets.find(recipient) == sockets.end()) {
 			clients_lock.unlock();
 			string response = errmsg(USER_OFFLINE);
 
@@ -176,21 +183,18 @@ class HTTP_Server : public TCP_Server
             send(client_socket, response.c_str(), response.length(), 0);
 			client_locks[client_socket].unlock();
 
+            sockets_lock.unlock();
             return;
 		}
 
-        string client = clients[client_socket];
-		clients_lock.unlock();
+        int recv_socket = sockets[recipient];
 
-        string recipient = extract_word(request);
-        string message = request;
+        sockets_lock.unlock();
 
         string response = "[" + client + "]: " + message;
 
         unordered_set<int> recipients;
-        sockets_lock.lock();
-        recipients.insert(sockets[recipient]);
-        sockets_lock.unlock();
+        recipients.insert(recv_socket);
 
         STATUS result = send_message(recipients, response);
 
