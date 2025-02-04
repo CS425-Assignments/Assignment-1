@@ -45,7 +45,7 @@ string extract_word(string& str) {
     if ( str.find(' ') == string::npos ) {
         string first_word = str;
         str = "";
-        return str;
+        return first_word;
     }
     string first_word = str.substr(0, str.find(' '));
     str = str.substr(str.find(' ') + 1);
