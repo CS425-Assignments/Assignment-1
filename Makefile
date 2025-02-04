@@ -12,7 +12,7 @@ CLIENT_BIN = client_grp
 all: $(SERVER_BIN) $(CLIENT_BIN)
 
 # Compile server
-$(SERVER_BIN): $(SERVER_SRC)
+$(SERVER_BIN): $(SERVER_SRC) tcp_server.cpp chat_server.cpp
 	$(CXX) $(CXXFLAGS) -o $(SERVER_BIN) $(SERVER_SRC)
 
 # Compile client
