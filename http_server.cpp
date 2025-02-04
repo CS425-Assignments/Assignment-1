@@ -175,6 +175,8 @@ class HTTP_Server : public TCP_Server
 			client_locks[client_socket].lock();
             send(client_socket, response.c_str(), response.length(), 0);
 			client_locks[client_socket].unlock();
+
+            return;
 		}
 
         string client = clients[client_socket];
