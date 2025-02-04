@@ -47,6 +47,17 @@ class HTTP_Server : public TCP_Server
         recv(client_socket, buffer, BUFFER_SIZE, 0);
         string password(buffer);
 
+        sockets_lock.lock();
+        if (sockets.find(username) != sockets.end())
+        {
+            string response = "Error: User already logged in.";
+            send(client_socket, response.c_str(), response.length(), 0);
+            sockets_lock.unlock();
+            close(client_socket);
+            return false;
+        }
+        sockets_lock.unlock();
+
         users_lock.lock();
         if (users.find(username) == users.end() || users[username] != password)
         {
