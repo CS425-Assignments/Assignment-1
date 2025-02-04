@@ -265,6 +265,7 @@ class HTTP_Server : public TCP_Server
         message = "[Group " + group_name + "]: " + message;
 
         groups_lock.lock();
+
         if (groups.find(group_name) == groups.end())
         {
             string response = errmsg(INVALID_GROUP_NAME);
@@ -281,6 +282,19 @@ class HTTP_Server : public TCP_Server
         unordered_set<int> recipients = groups[group_name];
 
 		auto it = recipients.find(client_socket);
+
+        if (it == recipients.end()) {
+            string response = errmsg(USER_NOT_IN_GROUP);
+
+            client_locks[client_socket].lock();
+            send(client_socket, response.c_str(), response.length(), 0);
+            client_locks[client_socket].unlock();
+
+            group_locks[group_name].unlock();
+            groups_lock.unlock();
+            return;
+        }
+        
 		recipients.erase(it);
 
         group_locks[group_name].unlock();
