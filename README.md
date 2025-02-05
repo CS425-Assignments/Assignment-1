@@ -210,3 +210,15 @@ I hereby declare that the work presented in this assignment is solely done by us
 I hereby declare that the work presented in this assignment is solely done by us and has not been copied from any unattributed sources.
 
 ### Feedback
+Following is our feedback for the assignment :
+- **What we liked about the assignment**
+    * The assignment was challenging and required us to think about the design of the chat server.
+    * The assignment allowed us to implement a real-world application that required us to handle multiple clients concurrently.
+    * The assignment was well-structured and provided clear guidelines on the functionalities that needed to be implemented.
+- **What we did not like about the assignment**
+    * The assignment could have provided more examples of the scenarios that we needed to handle.
+    * The assignment could have provided more details on the error handling that was expected.
+    * The assignment could have provided more details on the stress testing that was expected.
+    * Providing documentation in README is restrictive, latex or word documents could provide more flexibility.
+
+We thank the instructor for providing us with this opportunity to learn and implement a chat server. We look forward to more such assignments in the future.
