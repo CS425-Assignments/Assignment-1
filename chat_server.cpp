@@ -15,6 +15,7 @@
 #include "tcp_server.cpp"
 #include "utilities.cpp"
 
+#define MAX_USERS_ONLINE 1000
 #define MAX_GROUPS 10000
 #define MAX_USERS_PER_GROUP 1000
 
@@ -34,12 +35,20 @@ class Chat_Server : public TCP_Server
         INVALID_COMMAND = -8,
         SENDING_TO_SELF = -9,
         MAX_GROUPS_REACHED = -10,
-        MAX_USERS_PER_GROUP_REACHED = -11
+        MAX_USERS_PER_GROUP_REACHED = -11,
+        MAX_USERS_ONLINE_REACHED = -12
     };
 
     static const int BUFFER_SIZE = 1024;
 
     bool authenticate_user(int client_socket){
+
+        if (clients.size() >= MAX_USERS_ONLINE)
+        {
+            sendError(MAX_USERS_ONLINE_REACHED, client_socket);
+            return false;
+        }
+
         char buffer[BUFFER_SIZE];
         memset(buffer, 0, BUFFER_SIZE);
 
@@ -142,6 +151,9 @@ class Chat_Server : public TCP_Server
             break;
         case MAX_USERS_PER_GROUP_REACHED:
             msg += "Maximum number of users per group reached.";
+            break;
+        case MAX_USERS_ONLINE_REACHED:
+            msg += "Maximum number of users online reached, try again later.";
             break;
         default:
             msg += "Unknown error.";
