@@ -19,6 +19,7 @@
 #define MAX_USERS_ONLINE 1000
 #define MAX_GROUPS 10000
 #define MAX_USERS_PER_GROUP 1000
+#define BUFFER_SIZE 1024
 
 class Chat_Server : public TCP_Server
 {
@@ -40,8 +41,6 @@ class Chat_Server : public TCP_Server
         MAX_USERS_ONLINE_REACHED = -12,
         INVALID_ARGS = -13
     };
-
-    static const int BUFFER_SIZE = 1024;
 
     bool authenticate_user(int client_socket){
 
@@ -394,17 +393,32 @@ class Chat_Server : public TCP_Server
     }
 
     // lowest level network commands
-    STATUS send_message(const unordered_set<int> &recv_sockets, const string message){    
+    STATUS send_message(const unordered_set<int> &recv_sockets, const string message)
+    {   // check if the socket exists and lock it if it does
+        unordered_set<int> valid_sockets;
         for (auto &sock : recv_sockets)
         {
-            client_locks[sock].lock();
+            if(clients.find(sock) == clients.end())
+            {
+                continue;   
+            }
+            else 
+            {
+                client_locks[sock].lock();
+                valid_sockets.insert(sock);
+            }
+        }
+        for(auto &sock : valid_sockets)
+        {
             send(sock, message.c_str(), message.length(), 0);
+        }
+        for(auto &sock : valid_sockets)
+        {
             client_locks[sock].unlock();
         }
-
         return SUCCESS;
     }
-    
+
     STATUS create_group(const string group_name){
         groups_lock.lock();
 
