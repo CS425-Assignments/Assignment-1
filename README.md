@@ -120,7 +120,7 @@ Following are the implementation details of the chat server :
     * `join_group` : given an existing groupname, adds user's socket to the group's set
     * `leave_group` : given a group that the user is a member of, removes user's socket from the group.
 
-- **Error Handling** : Errors are implemented as an enum `STATUS` where anything other than `SUCCESS` implies an error. If any of the assumptions in a request are violated, request is aborted and error message is sent to the user (`send_error`) alongwith reason in the format: "Error: <msg>". 
+- **Error Handling** : Errors are implemented as an enum `STATUS` where anything other than `SUCCESS` implies an error. If any of the assumptions in a request are violated, request is aborted and error message is sent to the user (`send_error`) alongwith reason in the format: "Error: \<message\>". 
 
 - **Class Diagram** :
 ![image](./diagram/class%20diagram.png)
