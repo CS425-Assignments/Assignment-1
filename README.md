@@ -212,8 +212,8 @@ These constriansts were reached upon while testing the code on our personal comp
 ### Sources 
 Following are the sources referred to while implementing the chat server :
 - [Kurose and Ross, Computer Networking: A Top-Down Approach](https://gaia.cs.umass.edu/kurose_ross/eighth.php)
-- [Stack Overflow](https://stackoverflow.com/)
-- [Medium](https://medium.com/)
+- [Medium](https://medium.com/@aryandev512/i-wrote-a-http-server-from-scratch-in-c-0a97e8252371)
+- [C++ Reference](https://en.cppreference.com/w/)
 
 ### Decalarations
 
