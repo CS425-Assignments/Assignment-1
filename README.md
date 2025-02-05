@@ -113,6 +113,11 @@ Following are the implementation details of the chat server :
     * `handle_group_leave` : This function handles the group leaving request by the user.
         * The user should be a part of the group to leave the group.
         * The user is removed from the group.
+<!-- insert image -->
+- **Class Diagram** :
+![image](./diagram%20/class%20diagram.png)
+- **Code Flow Diagram** :
+![image](./diagram%20/code%20flow%20diagram.png)
 
 
 #### Additional Details
@@ -163,10 +168,31 @@ In scenarios having legitimate requests it was assured that there were no errors
 ### Contributions
 
 #### Aditi Khandelia
+- Conceptualized the design of the chat server
+- Implemented the TCP server class for the chat server
+- Implemented the client handler, and sending error messages to the client
+- Implemented the lowest level functions for sending and receiving messages
+- Correctness testing for the chat server
+- Stress testing to check the number of clients in any group
+- Documentation of the design decisions and implementation details
 
 #### Arush Upadhyaya
+- Conceptualized the design of the chat server
+- Implemented the chat server class functions for authentication, accepting connections, and thread creation
+- Implemented the lowest level functions for creating and joining groups
+- Implemented the Makefile for the project
+- Correctness testing for the chat server
+- Stress testing to check the number of groups that can be created
+- Documentation of the project, team, challenges faced and feedback
 
 #### Kushagra Srivastava
+- Conceptualized the design of the chat server
+- Implemented the chat server class functions for private messaging, group messaging, and group management
+- Implemented the lowest level functions for leaving groups and graceful exit of users
+- Implemented the utility functions for sending messages
+- Correctness testing for the chat server
+- Stress testing to check the number of online connections supported
+- Diagrams and documentation of restrictions and stress testing
 
 ### Sources 
 Following are the sources referred to while implementing the chat server :
