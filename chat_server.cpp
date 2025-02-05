@@ -398,31 +398,15 @@ class Chat_Server : public TCP_Server
     // lowest level network commands
     STATUS send_message(const unordered_set<int> &recv_sockets, const string message)
     {   // check if the socket exists and lock it if it does
-        unordered_set<int> valid_sockets;
-        for (auto &sock : recv_sockets)
+        for (const auto &recv_socket : recv_sockets)
         {
-            if(clients.find(sock) == clients.end())
+            if(sockets.find(clients[recv_socket]) == sockets.end())
             {
-                continue;   
+                continue;
             }
-            else 
-            {
-                client_locks[sock].lock();
-                valid_sockets.insert(sock);
-            }
-        }
-
-        if ( valid_sockets.size() == 0 ){
-            return USER_OFFLINE;
-        }
-        
-        for(auto &sock : valid_sockets)
-        {
-            send(sock, message.c_str(), message.length(), 0);
-        }
-        for(auto &sock : valid_sockets)
-        {
-            client_locks[sock].unlock();
+            client_locks[recv_socket].lock();
+            send(recv_socket, message.c_str(), message.length(), 0);
+            client_locks[recv_socket].unlock();
         }
         return SUCCESS;
     }
