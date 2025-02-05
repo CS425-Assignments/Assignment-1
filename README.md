@@ -94,8 +94,9 @@ Following are the implementation details of the chat server :
     * The class listens for incoming connections.
     * Upon getting a connection request, the server creates a connection socket for the client.
     * The server then authenticates the user by checking the username and password in the `users.txt` file.
-    * Upon successful authentication, the server launches a new thread to handle the client. It also updates the list of users and sockets.
-    * Each thread then listens to the incoming requests for clients and processes them accordingly.
+    * Upon successful authentication, the server launches a new thread to handle the client (`client_handler`). It also updates the list of users and sockets.
+    * `client_handler`: Each thread then listens to the incoming requests for clients, identifies the type of request and calls the appropriate handler for the request.
+
 - **Handler Functions** : The server provides the following handler functions :
     * `handle_private_message` : This function handles the private message sent by the user. 
         * The recipient of the message needs to be online at the time of sending the message.
@@ -113,16 +114,18 @@ Following are the implementation details of the chat server :
     * `handle_group_leave` : This function handles the group leaving request by the user.
         * The user should be a part of the group to leave the group.
         * The user is removed from the group.
-<!-- insert image -->
+- **Network Commands** : Low level functions to carry out network level operations, return the status of the request (either SUCCESS or an error status) :
+    * `send_message`: send response to a set of users
+    * `create_group` : given a unique group name and if max limit of groups is not reached, creates a group
+    * `join_group` : given an existing groupname, adds user's socket to the group's set
+    * `leave_group` : given a group that the user is a member of, removes user's socket from the group.
+
+- **Error Handling** : Errors are implemented as an enum `STATUS` where anything other than `SUCCESS` implies an error. If any of the assumptions in a request are violated, request is aborted and error message is sent to the user (`send_error`) alongwith reason in the format: "Error: <msg>". 
+
 - **Class Diagram** :
 ![image](./diagram%20/class%20diagram.png)
 - **Code Flow Diagram** :
 ![image](./diagram%20/code%20flow%20diagram.png)
-
-
-#### Additional Details
-
-1. 
 
 ### Testing
 
@@ -134,10 +137,20 @@ In scenarios having legitimate requests it was assured that there were no errors
 
 #### Stress Testing
 
+The server was tested using a `C++` code, that creates multiple threads (using pthreads) and logs in to the server sequentially. 
+In order to stress test, dummy users were created with the format `user{i}`. 
+- The server was able to handle upto 250 concurrent users. 
+- Online users were able to create 2000 groups. 
+
+These constriansts were reached upon while testing the code on our personal computers. CSE servers supported a higher constraint of around a 1000 concurrent users.
+
 
 ### Restrictions in our server
 
 1. Buffer Size : The server supports requests of upto 1024 Bytes in size, however the limit can be changed by setting `BUFFER_SIZE` in [chat_server.cpp](/chat_server.cpp) to the desired value.
+2. Maximum Number of Concurrent Users : The server can handle upto 250 concurrent users. This can be changed by setting `MAX_USERS_ONLINE` in [chat_server.cpp](/chat_server.cpp) to the desired value.
+3. Maximum Number of Groups : The server can handle upto 2000 groups. This can be changed by setting `MAX_GROUPS` in [chat_server.cpp](/chat_server.cpp) to the desired value.
+4. Maximum Number of Users in a Group : The server can handle upto 250 users in a group. This can be changed by setting `MAX_USERS_PER_GROUP` in [chat_server.cpp](/chat_server.cpp) to the desired value.
 
 ### Challenges
 - **Handling concurrent requests** : One of the main challenges was handling concurrent requests from multiple clients. 
