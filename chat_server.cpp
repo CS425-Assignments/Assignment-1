@@ -18,6 +18,7 @@
 #define MAX_USERS_ONLINE 1000
 #define MAX_GROUPS 10000
 #define MAX_USERS_PER_GROUP 1000
+#define BUFFER_SIZE 1024
 
 class Chat_Server : public TCP_Server
 {
@@ -38,8 +39,6 @@ class Chat_Server : public TCP_Server
         MAX_USERS_PER_GROUP_REACHED = -11,
         MAX_USERS_ONLINE_REACHED = -12
     };
-
-    static const int BUFFER_SIZE = 1024;
 
     bool authenticate_user(int client_socket){
 
