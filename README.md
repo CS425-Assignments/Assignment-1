@@ -27,6 +27,7 @@ This repository consists of the codebase for the implementation of a live-chat s
 ## Requirements
 
 - `C++20`
+- `Make`
 
 ## Instructions
 
@@ -35,24 +36,27 @@ This repository consists of the codebase for the implementation of a live-chat s
 ```bash
 make
 ```
+- Start the server
+```bash
+./server_grp
+```
 - If running the chat application as a client, run 
 ```bash
 ./client_grp 
-```
-- If running the chat application as a server, run 
-```bash
-./server_grp
 ```
 
 ## Documentation
 
 ### Features
+
+A multi-threaded TCP server implementation in C++ supporting group chat functionality. Handles multiple concurrent client connections and broadcasts messages between connected users.
+
 Following are the features provided by the chat server :
 - **User Authentication** : The server authenticates the user by checking the username and password in the `users.txt` file.
 - **Private Messaging** : The server allows the user to send private messages to any other user.
 - **Broadcast Messaging** : The server allows the user to send messages to all the users connected to the server.
 - **Group Creation** : The server allows the user to create a group.
-- **Group Joining** : The server allows the user to join a group.
+- **Group Joining** : The server allows the user to join an existing group.
 - **Group Messaging** : The server allows the user to send messages to all the users in a group.
 - **Group Leaving** : The server allows the user to leave a group.
 - The server is able to handle multiple clients at the same time.
@@ -77,7 +81,7 @@ Following are the implementation details of the chat server :
 
 - **TCP Server class** : The `tcp_server` class is responsible for creating a TCP server.
     * This allows us to create a server that listens for TCP connections at a specific port (set to 12345).
-    * The class also provides the ability to accept multiple welcoming connections simultaneously.
+    * The class also provides the ability to accept multiple welcoming connections simultaneously. <<!-- How? >>
     * Upon getting a connection request, the server creates a connection socket for the client.
 - **Chat Server class** : The `chat_server` class is responsible for handling the chat server.
     * As a child class of the `tcp_server` class, it inherits the ability to create a TCP server.
@@ -94,7 +98,7 @@ Following are the implementation details of the chat server :
     * Each thread then listens to the incoming requests for clients and processes them accordingly.
 - **Handler Functions** : The server provides the following handler functions :
     * `handle_private_message` : This function handles the private message sent by the user. 
-        * The recipient of the message needs to be online at the time of sending the message. Otherwise, appropriate error messages is sent.
+        * The recipient of the message needs to be online at the time of sending the message.
     * `handle_broadcast_message` : This function handles the broadcast message sent by the user. 
         * This function sends the message to all the users connected to the server.
         * The message is not sent to the user who sent the message.
@@ -102,17 +106,33 @@ Following are the implementation details of the chat server :
         * The group name should be unique.
         * The user who creates the group is automatically added to the group.
     * `handle_group_join` : This function handles the group joining request by the user.
+    * The group must exist at the time of this request.
     * `handle_group_message` : This function handles the group message sent by the user.
         * The user should be a part of the group to send a message.
-        * The message is sent to all the users in the group.
-        * The message is not sent to the user who sent the message.
+        * The message is sent to all the users in the group other than the sender
     * `handle_group_leave` : This function handles the group leaving request by the user.
         * The user should be a part of the group to leave the group.
         * The user is removed from the group.
 
+
+#### Additional Details
+
+1. 
+
 ### Testing
 
+#### Correctness Testing
+
+Using shell scripting, various scenarios were simulated, that involved mutliple clients logging in the server and interacting with each other using groups/broadcast/private messaging, including the scenario given in [A1.pdf](/A1.pdf)
+
+In scenarios having legitimate requests it was assured that there were no errors while error handling was tested separetly, manually
+
+#### Stress Testing
+
+
 ### Restrictions in our server
+
+1. Buffer Size : The server supports requests of upto 1024 Bytes in size, however the limit can be changed by setting `BUFFER_SIZE` in [chat_server.cpp](/chat_server.cpp) to the desired value.
 
 ### Challenges
 - **Handling concurrent requests** : One of the main challenges was handling concurrent requests from multiple clients. 

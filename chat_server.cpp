@@ -1,4 +1,5 @@
-// tcp-server object implementation
+// Chat-server object implementation
+
 #include <iostream>
 #include <string>
 #include <thread>
@@ -37,14 +38,15 @@ class Chat_Server : public TCP_Server
         SENDING_TO_SELF = -9,
         MAX_GROUPS_REACHED = -10,
         MAX_USERS_PER_GROUP_REACHED = -11,
-        MAX_USERS_ONLINE_REACHED = -12
+        MAX_USERS_ONLINE_REACHED = -12,
+        INVALID_ARGS = -13
     };
 
     bool authenticate_user(int client_socket){
 
         if (clients.size() >= MAX_USERS_ONLINE)
         {
-            sendError(MAX_USERS_ONLINE_REACHED, client_socket);
+            send_error(MAX_USERS_ONLINE_REACHED, client_socket);
             return false;
         }
 
@@ -65,7 +67,7 @@ class Chat_Server : public TCP_Server
         sockets_lock.lock();
         if (sockets.find(username) != sockets.end())
         {
-            sendError(USER_ALREADY_ONLINE, client_socket);
+            send_error(USER_ALREADY_ONLINE, client_socket);
             return false;
         }
         sockets_lock.unlock();
@@ -103,7 +105,6 @@ class Chat_Server : public TCP_Server
         string join_message = username + " has joined the chat.";
         send_message(recipients, join_message);
 
-        // Using lambda:
         thread client_thread([this, client_socket]() {
             this->client_handler(client_socket);
         });
@@ -113,7 +114,7 @@ class Chat_Server : public TCP_Server
     }
 
     // error handling
-    void sendError(STATUS status, int recv_socket ){
+    void send_error(STATUS status, int recv_socket ){
 
         string msg = "Error: ";
         switch (status)
@@ -154,6 +155,9 @@ class Chat_Server : public TCP_Server
         case MAX_USERS_ONLINE_REACHED:
             msg += "Maximum number of users online reached, try again later.";
             break;
+        case INVALID_ARGS:
+            msg += "Invalid arguments.";
+            break;
         default:
             msg += "Unknown error.";
             break;
@@ -162,10 +166,18 @@ class Chat_Server : public TCP_Server
         client_locks[recv_socket].lock();
         send(recv_socket, msg.c_str(), msg.length(), 0);
         client_locks[recv_socket].unlock();
+
     }
 
     // handlers for commands
     void handle_broadcast(int client_socket, const string& message){
+
+        if (invalid_arg(message)) 
+        {
+            send_error(INVALID_ARGS, client_socket);
+            return;
+        }
+
         string client = clients[client_socket];
 
         string response = "[Broadcast from " + client + "]: " + message;
@@ -185,8 +197,8 @@ class Chat_Server : public TCP_Server
 
         if (result != SUCCESS)
         {
-            sendError(result, client_socket);
-        } // is this fine?
+            send_error(result, client_socket);
+        }
     }
 
     void handle_private_message(int client_socket, string& request){
@@ -198,11 +210,17 @@ class Chat_Server : public TCP_Server
         string recipient = extract_word(request);
         string message = request;
 
+        if (invalid_arg(recipient) || invalid_arg(message))
+        {
+            send_error(INVALID_ARGS, client_socket);
+            return;
+        }
+
         sockets_lock.lock();
 		if ( sockets.find(recipient) == sockets.end()) {
             sockets_lock.unlock();
 
-			sendError(USER_OFFLINE, client_socket);
+			send_error(USER_OFFLINE, client_socket);
 
             return;
 		}
@@ -213,7 +231,7 @@ class Chat_Server : public TCP_Server
 
         if ( recv_socket == client_socket ) {
 
-            sendError(SENDING_TO_SELF, client_socket);
+            send_error(SENDING_TO_SELF, client_socket);
 
             return;
         }
@@ -227,11 +245,17 @@ class Chat_Server : public TCP_Server
 
         if (result != SUCCESS)
         {
-            sendError(result, client_socket);
+            send_error(result, client_socket);
         }
     }
 
     void handle_create_group(int client_socket, const string& group_name){
+
+        if (invalid_arg(group_name))
+        {
+            send_error(INVALID_ARGS, client_socket);
+            return;
+        }
 
         STATUS result = create_group(group_name);
 
@@ -243,7 +267,7 @@ class Chat_Server : public TCP_Server
         }
         else
         {
-            sendError(result, client_socket);
+            send_error(result, client_socket);
             return;
         }
 
@@ -253,6 +277,12 @@ class Chat_Server : public TCP_Server
     }
 
     void handle_join_group(int client_socket, const string& group_name){
+
+        if (invalid_arg(group_name))
+        {
+            send_error(INVALID_ARGS, client_socket);
+            return;
+        }
         
         STATUS result = join_group(group_name, client_socket);
 
@@ -266,11 +296,17 @@ class Chat_Server : public TCP_Server
         }
         else
         {
-            sendError(result, client_socket);
+            send_error(result, client_socket);
         }
     }
 
     void handle_leave_group(int client_socket, const string& group_name){
+
+        if (invalid_arg(group_name))
+        {
+            send_error(INVALID_ARGS, client_socket);
+            return;
+        }
         
         STATUS result = leave_group(group_name, client_socket);
 
@@ -284,14 +320,22 @@ class Chat_Server : public TCP_Server
         }
         else
         {
-            sendError(result, client_socket);
+            send_error(result, client_socket);
         }
 
     }
 
     void handle_group_message(int client_socket, string& request){
+
         string group_name = extract_word(request);
         string message = request;
+
+        if (invalid_arg(group_name) || invalid_arg(message))
+        {
+            send_error(INVALID_ARGS, client_socket);
+            return;
+        }
+
         message = "[Group " + group_name + "]: " + message;
 
         groups_lock.lock();
@@ -299,7 +343,7 @@ class Chat_Server : public TCP_Server
         if (groups.find(group_name) == groups.end())
         {
             groups_lock.unlock();
-            sendError(INVALID_GROUP_NAME, client_socket);
+            send_error(INVALID_GROUP_NAME, client_socket);
 
             return;
         }
@@ -313,7 +357,7 @@ class Chat_Server : public TCP_Server
             group_locks[group_name].unlock();
             groups_lock.unlock();
 
-            sendError(USER_NOT_IN_GROUP, client_socket);
+            send_error(USER_NOT_IN_GROUP, client_socket);
             return;
         }
         
@@ -521,7 +565,7 @@ class Chat_Server : public TCP_Server
                 break;
             }
             else {
-                sendError(INVALID_COMMAND, client_socket);
+                send_error(INVALID_COMMAND, client_socket);
             }
         }
     }
