@@ -114,6 +114,8 @@ Following are the implementation details of the chat server :
     * `handle_group_leave` : This function handles the group leaving request by the user.
         * The user should be a part of the group to leave the group.
         * The user is removed from the group.
+    * `handle_client_exit` : This function ensure clean exit for the client, where they are removed from all the groups that they are currently in, since the server does not retain any state about any user.
+
 - **Network Commands** : Low level functions to carry out network level operations, return the status of the request (either SUCCESS or an error status) :
     * `send_message`: send response to a set of users
     * `create_group` : given a unique group name and if max limit of groups is not reached, creates a group

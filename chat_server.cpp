@@ -388,7 +388,10 @@ class Chat_Server : public TCP_Server
         }
         groups_lock.unlock();
 
+        client_locks[client_socket].lock();
         close(client_socket);
+        client_locks[client_socket].unlock();
+
         cout << "Client " << username << " disconnected." << endl;
     }
 
