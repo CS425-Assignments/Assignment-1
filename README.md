@@ -150,7 +150,7 @@ Following are the implementation details of the chat server :
 
 ### Sources 
 Following are the sources referred to while implementing the chat server :
-- [Kurose and Ross, Computer Networking: A Top-Down Approach](https://www.amazon.in/Computer-Networking-Top-Down-Approach-7th/dp/933258568X)
+- [Kurose and Ross, Computer Networking: A Top-Down Approach](https://gaia.cs.umass.edu/kurose_ross/eighth.php)
 - [Stack Overflow](https://stackoverflow.com/)
 - [Medium](https://medium.com/)
 
