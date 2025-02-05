@@ -134,10 +134,20 @@ In scenarios having legitimate requests it was assured that there were no errors
 
 #### Stress Testing
 
+The server was tested using a `C++` code, that creates multiple threads (using pthreads) and logs in to the server sequentially. 
+In order to stress test, dummy users were created with the format `user{i}`. 
+- The server was able to handle upto 250 concurrent users. 
+- Online users were able to create 2000 groups. 
+
+These constriansts were reached upon while testing the code on our personal computers. CSE servers supported a higher constraint of around a 1000 concurrent users.
+
 
 ### Restrictions in our server
 
 1. Buffer Size : The server supports requests of upto 1024 Bytes in size, however the limit can be changed by setting `BUFFER_SIZE` in [chat_server.cpp](/chat_server.cpp) to the desired value.
+2. Maximum Number of Concurrent Users : The server can handle upto 250 concurrent users. This can be changed by setting `MAX_USERS_ONLINE` in [chat_server.cpp](/chat_server.cpp) to the desired value.
+3. Maximum Number of Groups : The server can handle upto 2000 groups. This can be changed by setting `MAX_GROUPS` in [chat_server.cpp](/chat_server.cpp) to the desired value.
+4. Maximum Number of Users in a Group : The server can handle upto 250 users in a group. This can be changed by setting `MAX_USERS_PER_GROUP` in [chat_server.cpp](/chat_server.cpp) to the desired value.
 
 ### Challenges
 - **Handling concurrent requests** : One of the main challenges was handling concurrent requests from multiple clients. 
