@@ -94,8 +94,9 @@ Following are the implementation details of the chat server :
     * The class listens for incoming connections.
     * Upon getting a connection request, the server creates a connection socket for the client.
     * The server then authenticates the user by checking the username and password in the `users.txt` file.
-    * Upon successful authentication, the server launches a new thread to handle the client. It also updates the list of users and sockets.
-    * Each thread then listens to the incoming requests for clients and processes them accordingly.
+    * Upon successful authentication, the server launches a new thread to handle the client (`client_handler`). It also updates the list of users and sockets.
+    * `client_handler`: Each thread then listens to the incoming requests for clients, identifies the type of request and calls the appropriate handler for the request.
+
 - **Handler Functions** : The server provides the following handler functions :
     * `handle_private_message` : This function handles the private message sent by the user. 
         * The recipient of the message needs to be online at the time of sending the message.
@@ -113,11 +114,15 @@ Following are the implementation details of the chat server :
     * `handle_group_leave` : This function handles the group leaving request by the user.
         * The user should be a part of the group to leave the group.
         * The user is removed from the group.
-
+- **Network Commands** : Low level functions to carry out network level operations, return the status of the request (either SUCCESS or an error status) :
+    * `send_message`: send response to a set of users
+    * `create_group` : given a unique group name and if max limit of groups is not reached, creates a group
+    * `join_group` : given an existing groupname, adds user's socket to the group's set
+    * `leave_group` : given a group that the user is a member of, removes user's socket from the group.
 
 #### Additional Details
 
-1. 
+1. Errors are implemented as an enum `STATUS` where anything other than `SUCCESS` implies an error. If any of the assumptions in a request are violated, request is aborted and error message is sent to the user (`send_error`) alongwith reason in the format: "Error: <msg>". 
 
 ### Testing
 
