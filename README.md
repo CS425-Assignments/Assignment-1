@@ -114,24 +114,18 @@ Following are the implementation details of the chat server :
     * `handle_group_leave` : This function handles the group leaving request by the user.
         * The user should be a part of the group to leave the group.
         * The user is removed from the group.
-<<<<<<< HEAD
 - **Network Commands** : Low level functions to carry out network level operations, return the status of the request (either SUCCESS or an error status) :
     * `send_message`: send response to a set of users
     * `create_group` : given a unique group name and if max limit of groups is not reached, creates a group
     * `join_group` : given an existing groupname, adds user's socket to the group's set
     * `leave_group` : given a group that the user is a member of, removes user's socket from the group.
-=======
-<!-- insert image -->
+
+- **Error Handling** : Errors are implemented as an enum `STATUS` where anything other than `SUCCESS` implies an error. If any of the assumptions in a request are violated, request is aborted and error message is sent to the user (`send_error`) alongwith reason in the format: "Error: <msg>". 
+
 - **Class Diagram** :
 ![image](./diagram%20/class%20diagram.png)
 - **Code Flow Diagram** :
 ![image](./diagram%20/code%20flow%20diagram.png)
-
->>>>>>> 023a2eada2cc87306effde585f3bb376eaa60629
-
-#### Additional Details
-
-1. Errors are implemented as an enum `STATUS` where anything other than `SUCCESS` implies an error. If any of the assumptions in a request are violated, request is aborted and error message is sent to the user (`send_error`) alongwith reason in the format: "Error: <msg>". 
 
 ### Testing
 
