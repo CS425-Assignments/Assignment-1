@@ -15,10 +15,7 @@
 #include "tcp_server.cpp"
 #include "utilities.cpp"
 
-#define MAX_GROUPS 10000
-#define MAX_USERS_PER_GROUP 1000
-
-class HTTP_Server : public TCP_Server
+class Chat_Server : public TCP_Server
 {
     private :
 
@@ -32,9 +29,7 @@ class HTTP_Server : public TCP_Server
         GROUP_EXISTS = -6,
         USER_ALREADY_ONLINE = -7,
         INVALID_COMMAND = -8,
-        SENDING_TO_SELF = -9,
-        MAX_GROUPS_REACHED = -10,
-        MAX_USERS_PER_GROUP_REACHED = -11
+        SENDING_TO_SELF = -9
     };
 
     static const int BUFFER_SIZE = 1024;
@@ -136,12 +131,6 @@ class HTTP_Server : public TCP_Server
             break;
         case SENDING_TO_SELF:
             msg += "Cannot send message to self.";
-            break;
-        case MAX_GROUPS_REACHED:
-            msg += "Maximum number of groups reached.";
-            break;
-        case MAX_USERS_PER_GROUP_REACHED:
-            msg += "Maximum number of users per group reached.";
             break;
         default:
             msg += "Unknown error.";
@@ -357,13 +346,6 @@ class HTTP_Server : public TCP_Server
 
             return GROUP_EXISTS;
         }
-        else if (groups.size() >= MAX_GROUPS)
-        {
-            cout << "Maximum number of groups reached." << endl;
-            groups_lock.unlock();
-
-            return MAX_GROUPS_REACHED;
-        }
 
         groups[group_name] = {};
         group_locks[group_name];
@@ -383,13 +365,6 @@ class HTTP_Server : public TCP_Server
             cout << "Group " << group_name << " does not exist." << endl;
             groups_lock.unlock();
             return INVALID_GROUP_NAME;
-        }
-        else if (groups[group_name].size() >= MAX_USERS_PER_GROUP)
-        {
-            cout << "Maximum number of users per group reached." << endl;
-            groups_lock.unlock();
-            
-            return MAX_USERS_PER_GROUP_REACHED;
         }
 
         group_locks[group_name].lock();
