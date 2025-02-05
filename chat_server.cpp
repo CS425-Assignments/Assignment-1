@@ -16,9 +16,9 @@
 #include "tcp_server.cpp"
 #include "utilities.cpp"
 
-#define MAX_USERS_ONLINE 1000
-#define MAX_GROUPS 10000
-#define MAX_USERS_PER_GROUP 1000
+#define MAX_USERS_ONLINE 250
+#define MAX_GROUPS 2000
+#define MAX_USERS_PER_GROUP 250
 #define BUFFER_SIZE 1024
 
 class Chat_Server : public TCP_Server
