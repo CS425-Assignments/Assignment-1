@@ -185,7 +185,7 @@ These constriansts were reached upon while testing the code on our personal comp
 #### Aditi Khandelia
 - Conceptualized the design of the chat server
 - Implemented the TCP server class for the chat server
-- Implemented the client handler, and sending error messages to the client
+- Implemented the client handler, error codes and sending error messages to clients
 - Implemented the lowest level functions for sending and receiving messages
 - Correctness testing for the chat server
 - Stress testing to check the number of clients in any group
