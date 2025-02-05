@@ -408,6 +408,11 @@ class Chat_Server : public TCP_Server
                 valid_sockets.insert(sock);
             }
         }
+
+        if ( valid_sockets.size() == 0 ){
+            return USER_OFFLINE;
+        }
+        
         for(auto &sock : valid_sockets)
         {
             send(sock, message.c_str(), message.length(), 0);
