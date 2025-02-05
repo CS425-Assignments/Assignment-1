@@ -51,3 +51,8 @@ string extract_word(string& str) {
     str = str.substr(str.find(' ') + 1);
     return first_word;
 }
+
+bool invalid_arg(const string& request)
+{
+    return request.find_first_not_of(' ') == string::npos;
+}
