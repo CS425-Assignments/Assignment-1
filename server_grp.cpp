@@ -18,7 +18,7 @@
 #include "chat_server.cpp"
 
 #define SERVER_PORT 12345
-#define MAX_USERS 1000
+#define MAX_USERS 250
 
 int main()
 {
